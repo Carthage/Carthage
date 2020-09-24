@@ -224,7 +224,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 			/// check.
 
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-			return shouldBuildScheme(buildArguments, platformAllowList)
+			return shouldBuildScheme(
+				buildArguments,
+				platformAllowList,
+				useXCFrameworks: useXCFrameworks.boolValue)
 				.filter { $0 }
                 .map { _ in (scheme, project) }
 		}
@@ -240,7 +243,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 					switch project {
 					case .workspace where schemes.contains(scheme):
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-						return shouldBuildScheme(buildArguments, platformAllowList)
+						return shouldBuildScheme(
+							buildArguments,
+							platformAllowList,
+							useXCFrameworks: useXCFrameworks.boolValue)
 							.filter { $0 }
 							.map { _ in project }
 
@@ -490,21 +496,35 @@ private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
 /// Determines whether the given scheme should be built automatically.
 private func shouldBuildScheme(
 	_ buildArguments: BuildArguments,
-	_ platformAllowList: Set<SDK>? = nil
+	_ platformAllowList: Set<SDK>? = nil,
+	useXCFrameworks: Bool
 ) -> SignalProducer<Bool, CarthageError> {
 	precondition(buildArguments.scheme != nil)
 
 	let setSignal = SDK.setsFromJSONShowSDKsWithFallbacks.promoteError(CarthageError.self)
 
 	return BuildSettings.load(with: buildArguments)
-		.flatMap(.merge) { (settings) -> SignalProducer<Set<SDK>, CarthageError> in
+		.flatMap(.merge) { (settings) -> SignalProducer<(Set<SDK>, BuildSettings), CarthageError> in
 			let supportedFrameworks = settings.buildSDKRawNames.map { sdk in SDK(name: sdk, simulatorHeuristic: "") }
 			guard settings.frameworkType.recover(nil) != nil else { return .empty }
-			return setSignal.map { $0.intersection(supportedFrameworks) }
+//			let k = setSignal
+//				.map { $0.intersection(supportedFrameworks) }
+//				.flatMap(.merge, SignalProducer.init)
+//				.zip(with: SignalProducer(
+//					result: settings.frameworkType)
+//				.flatMapError { _ in return .empty })
+//				.zip(with: SignalProducer<BuildSettings, CarthageError>(value: settings))
+
+			let k2 = setSignal
+				.map { $0.intersection(supportedFrameworks) }
+				.map {  ($0, settings) }
+
+			return k2
 		}
-		.reduce(into: false) {
-			let filter = (platformAllowList ?? $1).contains
-			$0 = $0 || $1.firstIndex(where: filter) != nil
+		.reduce(into: false) { shouldBuild, setOfSDKsAndBuildSetings in
+			let (sdks, settings) = setOfSDKsAndBuildSetings
+			let allSDKs = (platformAllowList ?? sdks)
+			shouldBuild = shouldBuild || (useXCFrameworks && settings.supportsXCFrameworks.recover(false) && !sdks.intersection(allSDKs).isEmpty)
 		}
 }
 
@@ -625,7 +645,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
 
 	let buildArgs = BuildArguments(
@@ -666,76 +686,19 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					SignalProducer<(String, [SDK]), CarthageError>(error: error)
 				})
 		}
-		.flatMap(.concat) { relativePath, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
-			let folderURL = rootDirectoryURL.appendingPathComponent(relativePath, isDirectory: true).resolvingSymlinksInPath()
+		.flatMap(.concat) { relativePath, sdks -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
 
-			switch sdks.count {
-			case 1:
-				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
-					.flatMapTaskEvents(.merge) { settings in
-						return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
-					}
-
-			case 2:
-				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
-				guard let deviceSDK = deviceSDKs.first else {
-					fatalError("Could not find device SDK in \(sdks)")
-				}
-				guard let simulatorSDK = simulatorSDKs.first else {
-					fatalError("Could not find simulator SDK in \(sdks)")
-				}
-
-				return settingsByTarget(build(sdk: deviceSDK, with: buildArgs, in: workingDirectoryURL))
-					.flatMap(.concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
-						switch settingsEvent {
-						case let .launch(task):
-							return SignalProducer(value: .launch(task))
-
-						case let .standardOutput(data):
-							return SignalProducer(value: .standardOutput(data))
-
-						case let .standardError(data):
-							return SignalProducer(value: .standardError(data))
-
-						case let .success(deviceSettingsByTarget):
-							return settingsByTarget(build(sdk: simulatorSDK, with: buildArgs, in: workingDirectoryURL))
-								.flatMapTaskEvents(.concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
-									assert(
-										deviceSettingsByTarget.count == simulatorSettingsByTarget.count,
-										"Number of targets built for \(deviceSDK) (\(deviceSettingsByTarget.count)) does not match "
-											+ "number of targets built for \(simulatorSDK) (\(simulatorSettingsByTarget.count))"
-									)
-
-									return SignalProducer { observer, lifetime in
-										for (target, deviceSettings) in deviceSettingsByTarget {
-											if lifetime.hasEnded {
-												break
-											}
-
-											let simulatorSettings = simulatorSettingsByTarget[target]
-											assert(simulatorSettings != nil, "No \(simulatorSDK) build settings found for target \"\(target)\"")
-
-											observer.send(value: (deviceSettings, simulatorSettings!))
-										}
-
-										observer.sendCompleted()
-									}
-								}
-						}
-					}
-					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						return mergeBuildProducts(
-							deviceBuildSettings: deviceSettings,
-							simulatorBuildSettings: simulatorSettings,
-							into: deviceSettings.productDestinationPath(in: folderURL)
-						)
-					}
-
-			default:
-				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
-			}
+			return buildFramework(
+				forScheme: scheme,
+				buildArguments: buildArgs,
+				buildOptions: options,
+				rootDirectoryURL: rootDirectoryURL,
+				workingDirectoryURL: workingDirectoryURL,
+				relativePath: relativePath,
+				sdks: sdks)
 		}
-		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
+		.flatMapTaskEvents(.concat) { buildQuartet -> SignalProducer<BuildQuartet, CarthageError> in
+			let (_, _, _, builtProductURL) = buildQuartet
 			return UUIDsForFramework(builtProductURL)
 				// Only attempt to create debug info if there is at least
 				// one dSYM architecture UUID in the framework. This can
@@ -744,76 +707,69 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				.take(first: 1)
 				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
 					return createDebugInformation(builtProductURL)
-			}
-			.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+				}
+				.then(SignalProducer<BuildQuartet, CarthageError>(value: buildQuartet))
 		}
 
 }
 
-//func buildFramework(
-//	forScheme scheme: Scheme,
-//	buildArguments buildArgs: BuildArguments,
-//	buildOptions options: BuildOptions,
-//	rootDirectoryURL: URL,
-//	workingDirectoryURL: URL,
-//	platformToSDKMap sdksByPlatform: [Platform: Set<SDK>]
-//) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> {
-//
-//	let values = sdksByPlatform.map { ($0, Array($1)) }
-//	return SignalProducer(values)
-//		.filter { _, sdks in
-//			return !sdks.isEmpty
-//	}
-//	.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
-//		let folderURL = rootDirectoryURL
-//			.appendingPathComponent(platform.relativePath, isDirectory: true)
-//			.resolvingSymlinksInPath()
-//
-//		return build(scheme: scheme,
-//					 forSDKs: sdks,
-//					 buildArguments: buildArgs,
-//					 workingDirectoryURL: workingDirectoryURL)
-//			.flatMapTaskEvents(.merge) { settingsAndSDKPairs in
-//
-//				switch settingsAndSDKPairs.count {
-//				case 1:
-//					let (settings, _) = settingsAndSDKPairs.first!
-//					let destination = settings.productDestinationPath(in: folderURL)
-//					return copyBuildProductIntoDirectory(destination, settings)
-//						.map { (settings, platform, Set(sdks), $0)}
-//
-//				case 2:
-//					let (deviceSettings, deviceSDK) = settingsAndSDKPairs.first!
-//					let (simulatorSettings, simulatorSDK) = settingsAndSDKPairs.last!
-//
-//					switch options.useXCFrameworks {
-//					case .none:
-//						return mergeBuildProducts(
-//							deviceBuildSettings: deviceSettings,
-//							simulatorBuildSettings: simulatorSettings,
-//							into: deviceSettings.productDestinationPath(in: folderURL))
-//							.map { (deviceSettings, platform, Set(sdks), $0)}
-//
-//					case .combined:
-//						let deviceDestination = deviceSettings.productDestinationPath(in: folderURL)
-//						let simulatorFolderURL = rootDirectoryURL
-//							.appendingPathComponent("\(platform.relativePath)Simulator", isDirectory: true)
-//							.resolvingSymlinksInPath()
-//						let simulatorDestination = simulatorSettings.productDestinationPath(in: simulatorFolderURL)
-//
-//						return copyBuildProductIntoDirectory(deviceDestination, deviceSettings)
-//							.map { (deviceSettings, platform, Set([deviceSDK]), $0) }
-//							.concat(copyBuildProductIntoDirectory(simulatorDestination, simulatorSettings)
-//								.map { (simulatorSettings, platform, Set([simulatorSDK]), $0)}
-//)
-//					}
-//
-//				default:
-//					fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
-//				}
-//		}
-//	}
-//}
+func buildFramework(
+	forScheme scheme: Scheme,
+	buildArguments buildArgs: BuildArguments,
+	buildOptions options: BuildOptions,
+	rootDirectoryURL: URL,
+	workingDirectoryURL: URL,
+	relativePath: String,
+	sdks: [SDK]
+) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> {
+
+	let folderURL = rootDirectoryURL
+		.appendingPathComponent(relativePath, isDirectory: true)
+		.resolvingSymlinksInPath()
+
+	return build(scheme: scheme,
+				 forSDKs: sdks,
+				 buildArguments: buildArgs,
+				 workingDirectoryURL: workingDirectoryURL)
+		.flatMapTaskEvents(.merge) { settingsAndSDKPairs in
+
+			switch settingsAndSDKPairs.count {
+			case 1:
+				let (settings, _) = settingsAndSDKPairs.first!
+				let destination = settings.productDestinationPath(in: folderURL)
+				return copyBuildProductIntoDirectory(destination, settings)
+					.map { (settings, relativePath, Set(sdks), $0)}
+
+			case 2:
+				let (deviceSettings, deviceSDK) = settingsAndSDKPairs.first!
+				let (simulatorSettings, simulatorSDK) = settingsAndSDKPairs.last!
+
+				switch options.useXCFrameworks {
+				case .none:
+					return mergeBuildProducts(
+						deviceBuildSettings: deviceSettings,
+						simulatorBuildSettings: simulatorSettings,
+						into: deviceSettings.productDestinationPath(in: folderURL))
+						.map { (deviceSettings, relativePath, Set(sdks), $0)}
+
+				case .combined:
+					let deviceDestination = deviceSettings.productDestinationPath(in: folderURL)
+					let simulatorFolderURL = rootDirectoryURL
+						.appendingPathComponent("\(relativePath)Simulator", isDirectory: true)
+						.resolvingSymlinksInPath()
+					let simulatorDestination = simulatorSettings.productDestinationPath(in: simulatorFolderURL)
+
+					return copyBuildProductIntoDirectory(deviceDestination, deviceSettings)
+						.map { (deviceSettings, relativePath, Set([deviceSDK]), $0) }
+						.concat(copyBuildProductIntoDirectory(simulatorDestination, simulatorSettings)
+									.map { (simulatorSettings, relativePath, Set([simulatorSDK]), $0)})
+				}
+
+			default:
+				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
+			}
+		}
+}
 
 func build(
 	scheme: Scheme,
@@ -1040,7 +996,7 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, Scheme)>, CarthageError>
 
 /// A type representing meta data of the outcome of a build operation
-//public typealias BuildQuartet = (buildSettings: BuildSettings, platform: Platform, sdks: Set<SDK>, builtProductURL: URL)
+public typealias BuildQuartet = (buildSettings: BuildSettings, relativePath: String, sdks: Set<SDK>, builtProductURL: URL)
 
 /// Attempts to build the dependency, then places its build product into the
 /// root directory given.
@@ -1095,7 +1051,7 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 			withConfiguration: options.configuration,
 			forPlatforms: options.platforms,
 			useXCFrameworks: options.useXCFrameworks)
-			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -1122,11 +1078,11 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 					})
 			}
 			.collectTaskEvents()
-			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
+			.flatMapTaskEvents(.concat) { (buildQuartets: [BuildQuartet]) -> SignalProducer<(), CarthageError> in
 
 				switch options.useXCFrameworks {
 				case .none:
-//					let urls = buildQuartets.map { $0.builtProductURL }
+					let urls = buildQuartets.map { $0.builtProductURL }
 					guard let dependency = dependency else {
 
 						return createVersionFileForCurrentProject(
@@ -1145,56 +1101,55 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						.flatMapError { _ in .empty }
 
 				case .combined:
-					fatalError()
-//					let partitioned: [String: (String, Set<URL>)] =
-//						buildQuartets
-//							.compactMap {
-//								quartet -> (key: String, value: (xcframeworkName: String, builtProductURL: URL))? in
-//								guard let name = quartet.buildSettings.xcFrameworkWrapperName.value,
-//									let frameworkType = quartet.buildSettings.frameworkType.value??.rawValue else {
-//										return nil
-//								}
-//								return (key: "\(name)-\(frameworkType)", value: (xcframeworkName: name, builtProductURL: quartet.builtProductURL))
-//						}
-//						.reduce(into: [String: (String, Set<URL>)]()) { acc, tuple in
-//							guard var value = acc[tuple.key] else {
-//								acc[tuple.key] = (tuple.value.xcframeworkName, Set([tuple.value.builtProductURL]))
-//								return
-//							}
-//							_ = value.1.insert(tuple.value.builtProductURL)
-//							acc[tuple.key] = (value.0, value.1)
-//					}
-//
-//					let frameworkNamesAndURLs = Array(partitioned.values)
-//
-//					return SignalProducer(frameworkNamesAndURLs).flatMap(.merge){ frameworkNameAndURLs in
-//						let (xcFrameworkName, frameworkURLs) = frameworkNameAndURLs
-//
-//						let outputDir = rootDirectoryURL
-//							.appendingPathComponent(Constants.combinedBinariesFolderPath)
-//							.appendingPathComponent(xcFrameworkName)
-//						let t = createXCFramework(Array(frameworkURLs), outputDir).flatMap(.merge) { xcframeworkURL -> SignalProducer<(), CarthageError> in
-//
-//							guard let dependency = dependency else {
-//
-//								return createVersionFileForCurrentProject(
-//									platforms: options.platforms,
-//									buildProducts: [xcframeworkURL],
-//									rootDirectoryURL: rootDirectoryURL)
-//									.flatMapError { _ in .empty }
-//							}
-//
-//							return createVersionFile(
-//								for: dependency.dependency,
-//								version: dependency.version,
-//								platforms: options.platforms,
-//								buildProducts: [xcframeworkURL],
-//								rootDirectoryURL: rootDirectoryURL)
-//								.flatMapError { _ in .empty }
-//						}
-//
-//						return t
-//					}
+					let partitioned: [String: (String, Set<URL>)] =
+						buildQuartets
+							.compactMap {
+								quartet -> (key: String, value: (xcframeworkName: String, builtProductURL: URL))? in
+								guard let name = quartet.buildSettings.xcFrameworkWrapperName.value,
+									let frameworkType = quartet.buildSettings.frameworkType.value??.rawValue else {
+										return nil
+								}
+								return (key: "\(name)-\(frameworkType)", value: (xcframeworkName: name, builtProductURL: quartet.builtProductURL))
+						}
+						.reduce(into: [String: (String, Set<URL>)]()) { acc, tuple in
+							guard var value = acc[tuple.key] else {
+								acc[tuple.key] = (tuple.value.xcframeworkName, Set([tuple.value.builtProductURL]))
+								return
+							}
+							_ = value.1.insert(tuple.value.builtProductURL)
+							acc[tuple.key] = (value.0, value.1)
+					}
+
+					let frameworkNamesAndURLs = Array(partitioned.values)
+
+					return SignalProducer(frameworkNamesAndURLs).flatMap(.merge){ frameworkNameAndURLs in
+						let (xcFrameworkName, frameworkURLs) = frameworkNameAndURLs
+
+						let outputDir = rootDirectoryURL
+							.appendingPathComponent(Constants.combinedBinariesFolderPath)
+							.appendingPathComponent(xcFrameworkName)
+						let t = createXCFramework(Array(frameworkURLs), outputDir).flatMap(.merge) { xcframeworkURL -> SignalProducer<(), CarthageError> in
+
+							guard let dependency = dependency else {
+
+								return createVersionFileForCurrentProject(
+									platforms: options.platforms,
+									buildProducts: [xcframeworkURL],
+									rootDirectoryURL: rootDirectoryURL)
+									.flatMapError { _ in .empty }
+							}
+
+							return createVersionFile(
+								for: dependency.dependency,
+								version: dependency.version,
+								platforms: options.platforms,
+								buildProducts: [xcframeworkURL],
+								rootDirectoryURL: rootDirectoryURL)
+								.flatMapError { _ in .empty }
+						}
+
+						return t
+					}
 				}
 			}
 			// Discard any Success values, since we want to

@@ -72,25 +72,29 @@ public struct BuildArguments {
 		self.toolchain = toolchain
 	}
 
-    /// The `xcodebuild` invocation corresponding to the receiver.
-    public var arguments: [String] {
+	/// The `xcodebuild` invocation corresponding to the receiver.
+	public var arguments: [String] {
 
-        var args = rawArguments
+		var args = rawArguments
 
-        if let sdk = sdk {
-            // Passing in -sdk macosx appears to break implicit dependency
-            // resolution (see Carthage/Carthage#347).
-            //
-            // Since we wouldn't be trying to build this target unless it were
-            // for macOS already, just let xcodebuild figure out the SDK on its
-            // own.
-            if sdk.rawValue != "macosx" {
-                args += [ "-sdk", sdk.rawValue ]
-            }
-        }
+		if let sdk = sdk {
+			// Passing in -sdk macosx appears to break implicit dependency
+			// resolution (see Carthage/Carthage#347).
+			//
+			// Since we wouldn't be trying to build this target unless it were
+			// for macOS already, just let xcodebuild figure out the SDK on its
+			// own.
+			if sdk.rawValue == "macosx", let sdkIndex = args.firstIndex(where: { $0 == "-sdk"} ) {
 
-        return args
-    }
+				if sdkIndex + 1 < args.count {
+					args.remove(at: sdkIndex) // remove -sdk
+					args.remove(at: sdkIndex) // remove parameter
+				}
+			}
+		}
+
+		return args
+	}
 
 	public var rawArguments: [String] {
 

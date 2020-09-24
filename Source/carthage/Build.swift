@@ -47,11 +47,14 @@ public struct BuildCommand: CommandProtocol {
 		/// Otherwise, this producer will be empty.
 		public var archiveProducer: SignalProducer<(), CarthageError> {
 			if archive {
-				let options = ArchiveCommand.Options(outputPath: nil,
-													 directoryPath: directoryPath,
-													 colorOptions: colorOptions,
-													 createXCFramework: buildOptions.useXCFrameworks,
-													 frameworkNames: [])
+				let options = ArchiveCommand
+					.Options(
+						outputPath: nil,
+						directoryPath: directoryPath,
+						colorOptions: colorOptions,
+						createXCFramework: buildOptions.useXCFrameworks,
+						frameworkNames: []
+				)
 				return ArchiveCommand().archiveWithOptions(options)
 			} else {
 				return .empty

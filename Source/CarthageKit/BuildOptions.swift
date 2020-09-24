@@ -7,6 +7,15 @@ public enum XCFrameworkPackaging: Equatable {
 	case none
 	/// Make an xcframework out of all platforms
 	case combined
+
+	var  boolValue: Bool {
+		switch self {
+		case .none:
+			return false
+		default:
+			return true
+		}
+	}
 }
 
 /// The build options used for building `xcodebuild` command.
