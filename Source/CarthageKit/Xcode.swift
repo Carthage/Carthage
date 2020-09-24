@@ -1239,7 +1239,7 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
 
   let fileManager = FileManager.default.reactive
   
-  let createTempDir: SignalProducer<URL, CarthageError> = fileManager.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
+  let createTempDir: SignalProducer<URL, CarthageError> = fileManager.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX", destinationURL: binaryURL)
   
   let copyItem: (URL, URL) -> SignalProducer<URL, CarthageError> = { source, dest in
     fileManager.copyItem(source, into: dest)
