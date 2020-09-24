@@ -314,6 +314,38 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
+		it("should skip the expected schemes") {
+			let dependency = "SchemeDiscoverySampleForCarthage"
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
+
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL, skipSchemes: ["SchemeDiscoverySampleForCarthage-iOS"])
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error).to(beNil())
+
+			let expectedPlatformsFrameworks = [
+				("Mac", "SchemeDiscoverySampleForCarthage"),
+			]
+
+			let expectedSkippedFrameworks = [
+				("iOS", "SchemeDiscoverySampleForCarthage"),
+			]
+
+			for (platform, framework) in expectedPlatformsFrameworks {
+				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
+				expect(path).to(beExistingDirectory())
+			}
+
+			for (platform, framework) in expectedSkippedFrameworks {
+				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
+				expect(path).toNot(beExistingDirectory())
+			}
+		}
+
 		it("should not copy build products from nested dependencies produced by workspace") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
 
