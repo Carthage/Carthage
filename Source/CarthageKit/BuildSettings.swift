@@ -154,6 +154,10 @@ public struct BuildSettings {
 		}
 	}
 
+	public var archs: Result<Set<String>, CarthageError> {
+		return self["ARCHS"].map { Set($0.components(separatedBy: " ")) }
+	}
+
 	/// Attempts to determine the ProductType specified in these build settings.
 	public var productType: Result<ProductType, CarthageError> {
 		return self["PRODUCT_TYPE"].flatMap(ProductType.from(string:))
@@ -242,6 +246,11 @@ public struct BuildSettings {
 	/// Attempts to determine the name of the built product's wrapper bundle.
 	public var wrapperName: Result<String, CarthageError> {
 		return self["WRAPPER_NAME"]
+	}
+
+	/// Attempts to determine the name of the built product.
+	public var productName: Result<String, CarthageError> {
+		return self["PRODUCT_NAME"]
 	}
 
 	/// Attempts to determine the URL to the built product's wrapper, corresponding

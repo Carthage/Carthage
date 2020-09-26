@@ -28,18 +28,20 @@ public struct XcodeVersion {
 	// swiftlint:disable next force_try
 	private static let regex = try! NSRegularExpression(pattern: "Xcode ([0-9.]+)\\nBuild version (.+)")
 
-	public static func make() -> XcodeVersion? {
-		let task = Task("/usr/bin/xcrun", arguments: ["xcodebuild", "-version"])
-		return task.launch()
-			.ignoreTaskData()
-			.map { String(data: $0, encoding: .utf8)! }
-			.flatMap(.concat) { output -> SignalProducer<XcodeVersion, TaskError> in
-				if let xcodeVersion = XcodeVersion(xcodebuildOutput: output) {
-					return .init(value: xcodeVersion)
-				} else {
-					return .empty
-				}
+	private static let versionProducer = Task("/usr/bin/xcrun", arguments: ["xcodebuild", "-version"])
+		.launch()
+		.ignoreTaskData()
+		.map { String(data: $0, encoding: .utf8)! }
+		.flatMap(.concat) { output -> SignalProducer<XcodeVersion, TaskError> in
+			if let xcodeVersion = XcodeVersion(xcodebuildOutput: output) {
+				return .init(value: xcodeVersion)
+			} else {
+				return .empty
 			}
-			.single()?.value
+		}
+		.replayLazily(upTo: 1)
+
+	public static func make() -> XcodeVersion? {
+		return versionProducer.single()?.value
 	}
 }

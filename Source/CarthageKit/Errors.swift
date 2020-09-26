@@ -104,6 +104,10 @@ public enum CarthageError: Error {
 	/// An archive (.zip, .gz, .bz2 ...) contains binaries that would
 	/// be copied to the same destination path
 	case duplicatesInArchive(duplicates: DuplicatesInArchive)
+
+	/// Building frameworks with common device and simulator architectures
+	/// requires Xcode 12 or greater. Current version: `<xcodebuildVersion>`
+	case xcframeworkRequired(xcodebuildVersion: String)
 }
 
 extension CarthageError {
@@ -195,6 +199,9 @@ extension CarthageError: Equatable {
 			return left == right
 
 		case let (.duplicatesInArchive(left), .duplicatesInArchive(right)):
+			return left == right
+
+		case let (.xcframeworkRequired(left), .xcframeworkRequired(right)):
 			return left == right
 
 		default:
@@ -381,6 +388,9 @@ extension CarthageError: CustomStringConvertible {
 				.map { "* \t\($0.value.map{ url in return url.absoluteString }.joined(separator: "\n\t")) \n\t\tto:\n\t\($0.key)" }
 				.joined(separator: "\n")
 			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
+
+		case let .xcframeworkRequired(xcodebuildVersion):
+			return "Building frameworks with common device and simulator architectures requires Xcode 12 or greater. Current version: \(xcodebuildVersion)"
 		}
 	}
 }

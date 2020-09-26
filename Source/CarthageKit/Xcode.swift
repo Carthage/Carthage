@@ -185,6 +185,23 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, env
 	return xcodebuildTask([task], buildArguments)
 }
 
+func shouldBuildXCFramework(deviceBuildSettings: BuildSettings, simulatorBuildSettings: BuildSettings) -> Result<Bool, CarthageError> {
+	let isRequired = deviceBuildSettings.archs.fanout(simulatorBuildSettings.archs).map { deviceArchs, simulatorArchs in
+		!deviceArchs.isDisjoint(with: simulatorArchs)
+	}
+	return isRequired.flatMap { isRequired in
+		guard isRequired else { return .success(false) }
+		guard let xcodeVersion = XcodeVersion.make() else {
+			return .failure(.xcframeworkRequired(xcodebuildVersion: "unknown"))
+		}
+		let versionComponents = xcodeVersion.version.split(separator: ".")
+		guard let majorVersion = Int(versionComponents[0]), majorVersion >= 12 else {
+			return .failure(.xcframeworkRequired(xcodebuildVersion: xcodeVersion.version))
+		}
+		return .success(true)
+	}
+}
+
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
@@ -527,52 +544,93 @@ private func mergeBuildProducts(
 	simulatorBuildSettings: BuildSettings,
 	into destinationFolderURL: URL
 ) -> SignalProducer<URL, CarthageError> {
-	return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
-		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
-			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
-			let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
+	let createXCFramework = shouldBuildXCFramework(deviceBuildSettings: deviceBuildSettings, simulatorBuildSettings: simulatorBuildSettings)
+	return SignalProducer(result: createXCFramework)
+		.flatMap(.concat) { (createXCFramework: Bool) -> SignalProducer<URL, CarthageError> in
+			if createXCFramework {
+				let outputURL = SignalProducer(result: deviceBuildSettings.productName)
+					.map { destinationFolderURL.appendingPathComponent($0).appendingPathExtension("xcframework") }
+					.attempt { url in
+						if (try? url.checkResourceIsReachable()) ?? false {
+							return Result(catching: { try FileManager.default.removeItem(at: url) })
+						} else {
+							return .success(())
+						}
+					}
+				let settings = SignalProducer<BuildSettings, CarthageError>(values: deviceBuildSettings, simulatorBuildSettings)
+				let frameworkArguments = settings.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
+					let frameworkPath = SignalProducer(result: settings.wrapperURL.map({ $0.resolvingSymlinksInPath().path }))
+					let debugSymbols = SignalProducer(result: settings.wrapperURL).flatMap(.concat, createDebugInformation)
+						.ignoreTaskData()
+						.map({ $0.path })
+					let symbolmaps = SignalProducer(result: settings.wrapperURL)
+						.flatMap(.concat, BCSymbolMapsForFramework)
+						.filter({ (try? $0.checkResourceIsReachable()) ?? false })
+						.map({ $0.path })
+					let bitcodeEnabled = settings.bitcodeEnabled.value == true
 
-			let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
-				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
-					return mergeExecutables(
-						executableURLs.map { $0.resolvingSymlinksInPath() },
-						outputURL.resolvingSymlinksInPath()
-					)
+					return SignalProducer(value: "-framework").concat(frameworkPath)
+						.concat(debugSymbols.flatMap(.concat, { SignalProducer(values: "-debug-symbols", $0) }))
+						.concat(bitcodeEnabled
+											? symbolmaps.flatMap(.concat, { SignalProducer(values: "-debug-symbols", $0) })
+											: .empty)
 				}
 
-			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
-				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL: URL) -> SignalProducer<(), CarthageError> in
-					guard isSwiftFramework(productURL) else { return .empty }
-
-					return mergeSwiftHeaderFiles(
-						simulatorURL.resolvingSymlinksInPath(),
-						deviceURL.resolvingSymlinksInPath(),
-						outputURL.resolvingSymlinksInPath()
-					)
+				return outputURL.combineLatest(with: frameworkArguments.collect()).flatMap(.concat) { outputURL, frameworkArguments -> SignalProducer<URL, CarthageError> in
+					return Task(
+						"/usr/bin/xcrun",
+						arguments: ["xcodebuild", "-create-xcframework", "-allow-internal-distribution"] + frameworkArguments + ["-output", outputURL.path]
+					).launch().mapError(CarthageError.taskError).ignoreTaskData().map { _ in outputURL }
 				}
+			} else {
+				return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
+					.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
+						let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
+						let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
 
-			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
-				.filter { $0.0 != nil }
-				.map { modulesPath, productsURL in
-					return productsURL.appendingPathComponent(modulesPath!)
-				}
+						let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
+							.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
+								return mergeExecutables(
+									executableURLs.map { $0.resolvingSymlinksInPath() },
+									outputURL.resolvingSymlinksInPath()
+								)
+							}
 
-			let destinationModulesURL = SignalProducer(result: deviceBuildSettings.relativeModulesPath)
-				.filter { $0 != nil }
-				.map { modulesPath -> URL in
-					return destinationFolderURL.appendingPathComponent(modulesPath!)
-				}
+						let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
+							.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL: URL) -> SignalProducer<(), CarthageError> in
+								guard isSwiftFramework(productURL) else { return .empty }
 
-			let mergeProductModules = SignalProducer.zip(sourceModulesURL, destinationModulesURL)
-				.flatMap(.merge) { (source: URL, destination: URL) -> SignalProducer<URL, CarthageError> in
-					return mergeModuleIntoModule(source, destination)
-				}
+								return mergeSwiftHeaderFiles(
+									simulatorURL.resolvingSymlinksInPath(),
+									deviceURL.resolvingSymlinksInPath(),
+									outputURL.resolvingSymlinksInPath()
+								)
+							}
 
-			return mergeProductBinaries
-				.then(mergeProductSwiftHeaderFilesIfNeeded)
-				.then(mergeProductModules)
-				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
-				.then(SignalProducer<URL, CarthageError>(value: productURL))
+						let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
+							.filter { $0.0 != nil }
+							.map { modulesPath, productsURL in
+								return productsURL.appendingPathComponent(modulesPath!)
+							}
+
+						let destinationModulesURL = SignalProducer(result: deviceBuildSettings.relativeModulesPath)
+							.filter { $0 != nil }
+							.map { modulesPath -> URL in
+								return destinationFolderURL.appendingPathComponent(modulesPath!)
+							}
+
+						let mergeProductModules = SignalProducer.zip(sourceModulesURL, destinationModulesURL)
+							.flatMap(.merge) { (source: URL, destination: URL) -> SignalProducer<URL, CarthageError> in
+								return mergeModuleIntoModule(source, destination)
+							}
+
+						return mergeProductBinaries
+							.then(mergeProductSwiftHeaderFilesIfNeeded)
+							.then(mergeProductModules)
+							.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
+							.then(SignalProducer<URL, CarthageError>(value: productURL))
+					}
+			}
 		}
 }
 
@@ -701,16 +759,21 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			}
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
-			return UUIDsForFramework(builtProductURL)
-				// Only attempt to create debug info if there is at least
-				// one dSYM architecture UUID in the framework. This can
-				// occur if the framework is a static framework packaged
-				// like a dynamic framework.
-				.take(first: 1)
-				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
-					return createDebugInformation(builtProductURL)
-				}
-				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+			if builtProductURL.pathExtension == "xcframework" {
+				// XCFrameworks already have debug information embedded in them.
+				return SignalProducer(value: builtProductURL)
+			} else {
+				return UUIDsForFramework(builtProductURL)
+					// Only attempt to create debug info if there is at least
+					// one dSYM architecture UUID in the framework. This can
+					// occur if the framework is a static framework packaged
+					// like a dynamic framework.
+					.take(first: 1)
+					.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
+						return createDebugInformation(builtProductURL)
+					}
+					.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+			}
 		}
 }
 
