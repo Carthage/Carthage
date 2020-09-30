@@ -207,8 +207,10 @@ class VersionFileSpec: QuickSpec {
 				swiftToolchainVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 			)
 
-			expect(dynamicFramework.relativePath) == "TestFramework.framework"
-			expect(staticFramework.relativePath) == "Static/TestFramework.framework"
+			expect(dynamicFramework.relativeFrameworkPath) == "TestFramework.framework"
+			expect(staticFramework.relativeFrameworkPath) == "Static/TestFramework.framework"
+			expect(dynamicFramework.relativeXCFrameworkPath) == "TestFramework.xcframework"
+			expect(staticFramework.relativeXCFrameworkPath) == "Static/TestFramework.xcframework"
 		}
 	}
 }
