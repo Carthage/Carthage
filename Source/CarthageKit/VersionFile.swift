@@ -27,12 +27,21 @@ public struct CachedFramework: Codable {
 	}
 
 	/// The framework's expected location within a platform directory.
-	var relativePath: String {
+	var relativeFrameworkPath: String {
 		switch linking {
 		case .some(.static):
 			return "\(FrameworkType.staticFolderName)/\(name).framework"
 		default:
 			return "\(name).framework"
+		}
+	}
+
+	var relativeXCFrameworkPath: String {
+		switch linking {
+		case .some(.static):
+			return "\(FrameworkType.staticFolderName)/\(name).xcframework"
+		default:
+			return "\(name).xcframework"
 		}
 	}
 }
@@ -130,28 +139,37 @@ public struct VersionFile: Codable {
 		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
-		return binariesDirectoryURL
+		let buildDirectory = binariesDirectoryURL
 			.appendingPathComponent(platform.platformSimulatorlessFromHeuristic, isDirectory: true)
 			.resolvingSymlinksInPath()
-			.appendingPathComponent(cachedFramework.relativePath, isDirectory: true)
+
+		let xcframework = buildDirectory.appendingPathComponent(cachedFramework.relativeXCFrameworkPath, isDirectory: true)
+		if (try? xcframework.checkResourceIsReachable()) ?? false {
+			return xcframework
+		} else {
+			return buildDirectory.appendingPathComponent(cachedFramework.relativeFrameworkPath, isDirectory: true)
+		}
 	}
 
-	/// Calculates the path of the binary inside the framework corresponding with a version file
+	/// Calculates the path of the binary or binaries inside the framework corresponding with a version file
 	/// - Parameters:
 	///   - cachedFramework: the cached framework used to calculate the path
 	///   - platform: the platform to use
 	///   - binariesDirectoryURL: the binaries directory
-	public func frameworkBinaryURL(
+	public func frameworkBinaryURLs(
 		for cachedFramework: CachedFramework,
 		platform: SDK,
 		binariesDirectoryURL: URL
-	) -> URL {
-		return frameworkURL(
-			for: cachedFramework,
-			platform: platform,
-			binariesDirectoryURL: binariesDirectoryURL
+	) -> SignalProducer<URL, NoError> {
+		return frameworkBundlesInURL(
+			frameworkURL(
+				for: cachedFramework,
+				platform: platform,
+				binariesDirectoryURL: binariesDirectoryURL
+			)
 		)
-			.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
+		.filterMap { $0.executableURL }
+		.flatMapError { _ in .empty }
 	}
 
 	/// Sends the hashes of the provided cached framework's binaries in the
@@ -163,13 +181,13 @@ public struct VersionFile: Codable {
 	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
-				let frameworkBinaryURL = self.frameworkBinaryURL(
+				let frameworkBinaryURLs = self.frameworkBinaryURLs(
 					for: cachedFramework,
 					platform: platform,
 					binariesDirectoryURL: binariesDirectoryURL
 				)
 
-				return hashForFileAtURL(frameworkBinaryURL)
+				return hashOfFiles(atURLs: frameworkBinaryURLs.promoteError())
 					.map { hash -> String? in
 						return hash
 					}
@@ -199,14 +217,19 @@ public struct VersionFile: Codable {
 					binariesDirectoryURL: binariesDirectoryURL
 				)
 
-				if !isSwiftFramework(frameworkURL) {
-					return SignalProducer(value: true)
-				} else {
-					return frameworkSwiftVersion(frameworkURL)
-						.map { swiftVersion -> Bool in
-							return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
-						}
-						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+				return frameworkBundlesInURL(frameworkURL)
+					.take(first: 1)
+					.mapError { CarthageError.readFailed(frameworkURL, $0 as NSError) }
+					.flatMap(.concat) { framework -> SignalProducer<Bool, CarthageError> in
+					if !isSwiftFramework(framework.bundleURL) {
+						return SignalProducer(value: true)
+					} else {
+						return frameworkSwiftVersion(framework.bundleURL)
+							.map { swiftVersion -> Bool in
+								return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
+							}
+							.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+					}
 				}
 			}
 	}
@@ -495,17 +518,27 @@ public func createVersionFileForCommitish(
 					frameworkType = .dynamic
 				}
 
-				return frameworkSwiftVersionIfIsSwiftFramework(url)
-					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
-					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
-					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
-										     frameworkName: frameworkName,
-										     frameworkSwiftVersion: frameworkSwiftVersion,
-										     frameworkType: frameworkType)
-					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
-					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
-				}
+				let hash = hashOfFiles(
+					atURLs: frameworkBundlesInURL(url)
+						.mapError { _ in CarthageError.readFailed(url, nil) }
+						.map { $0.executableURL! }
+				)
+				let detail = frameworkBundlesInURL(url)
+					.mapError { _ in CarthageError.readFailed(url, nil) }
+					.flatMap(.concat) { bundle -> SignalProducer<FrameworkDetail, CarthageError> in
+						frameworkSwiftVersion(bundle.bundleURL)
+							.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
+							.map { frameworkSwiftVersion in
+								FrameworkDetail(
+									platformName: platformName,
+									frameworkName: frameworkName,
+									frameworkSwiftVersion: frameworkSwiftVersion,
+									frameworkType: frameworkType
+								)
+							}
+					}
+
+				return hash.combineLatest(with: detail)
 			}
 			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
 				let hash = values.0
@@ -585,22 +618,33 @@ public func versionFileMatches(
 		}
 }
 
-private func hashForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
-	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
-		return SignalProducer(error: .readFailed(frameworkFileURL, nil))
+private func hashOfFiles(atURLs urls: SignalProducer<URL, CarthageError>) -> SignalProducer<String, CarthageError> {
+	let task = Task("/usr/bin/shasum", arguments: ["-a", "256"])
+	let data = urls.attemptMap { url -> Result<Data, CarthageError> in
+		do {
+			return .success(try Data(contentsOf: url))
+		} catch {
+			return .failure(.readFailed(url, error as NSError))
+		}
 	}
 
-	let task = Task("/usr/bin/shasum", arguments: ["-a", "256", frameworkFileURL.path])
+	return SignalProducer<String, CarthageError> { observer, lifetime in
+		data.startWithSignal { signal, disposable in
+			// Task.launch(…) takes a SignalProducer<Data, NoError>, but we _do_ want to fail the SignalProducer when
+			// something reading the input files fails.
+			lifetime += signal.observeFailed(observer.send(error:))
+			lifetime += task.launch(standardInput: SignalProducer(signal.flatMapError { _ in .empty }))
+				.mapError(CarthageError.taskError)
+				.ignoreTaskData()
+				.attemptMap { data in
+					guard let taskOutput = String(data: data, encoding: .utf8) else {
+						return .failure(.internalError(description: "Unexpected output from shasum"))
+					}
 
-	return task.launch()
-		.mapError(CarthageError.taskError)
-		.ignoreTaskData()
-		.attemptMap { data in
-			guard let taskOutput = String(data: data, encoding: .utf8) else {
-				return .failure(.readFailed(frameworkFileURL, nil))
-			}
-
-			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
-			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
+					let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
+					return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
+				}
+				.start(observer)
 		}
+	}
 }
