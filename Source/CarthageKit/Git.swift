@@ -242,7 +242,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 /// directory.
 private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return launchGitTask([ "checkout", "--quiet", submodule.sha ], repositoryFileURL: submoduleWorkingDirectoryURL)
-		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
+		.then(launchGitTask([ "-c", "protocol.version=2", "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
