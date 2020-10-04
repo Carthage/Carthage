@@ -5,7 +5,7 @@ opt_in_rules:
 - empty_count
 - explicit_init
 - fatal_error_message
-- file_header
+- first_header
 - first_where
 - implicitly_unwrapped_optional
 - no_extension_access_modifier
