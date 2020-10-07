@@ -1176,6 +1176,8 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 				$0.next() ?? ""
 			})
 
+			let suffix = zip(frameworkPathComponents, $0.pathComponents).drop(while: { $0 == $1 })
+
 			if suffix.contains(where: { $0.0 != "" }) {
 				return .failure(CarthageError.internalError(description: "In attempt to read NSBundle «\(frameworkURL.absoluteString)»'s binary url, could not relativize «\($0.debugDescription)» against «\(frameworkURL.absoluteString)»."))
 			}
