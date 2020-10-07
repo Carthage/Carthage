@@ -67,7 +67,6 @@ private func copyFramework(_ source: URL, target: URL, validArchitectures: [Stri
 
 private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
 	return architecturesInPackage(framework)
-		.collect()
 		.map { architectures in
 			// Return all the architectures, present in the framework, that are valid.
 			validArchitectures.filter(architectures.contains)
