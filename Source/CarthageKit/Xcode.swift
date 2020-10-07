@@ -1055,10 +1055,12 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 }
 
 /// Strips a universal file from unexpected architectures.
-private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return architecturesInPackage(binaryURL)
-		.filter { !keepingArchitectures.contains($0) }
-		.flatMap(.concat) { stripArchitecture(binaryURL, $0) }
+private func stripBinary(_ packageURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+	return architecturesInPackage(packageURL)
+		.flatMap(.race) { (packageArchs: [String]) in
+            stripArchitectures(packageURL, Set(packageArchs).subtracting(keepingArchitectures))
+				.then(SignalProducer<(), CarthageError>(value: ()))
+		}
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -1174,16 +1176,13 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 				$0.next() ?? ""
 			})
 
-			let suffix = zip(frameworkPathComponents, $0.pathComponents).drop(while: { $0 == $1 })
-
 			if suffix.contains(where: { $0.0 != "" }) {
-				return .failure(CarthageError.internalError(description: "∆∆∆"))
+				return .failure(CarthageError.internalError(description: "In attempt to read NSBundle «\(frameworkURL.absoluteString)»'s binary url, could not relativize «\($0.debugDescription)» against «\(frameworkURL.absoluteString)»."))
 			}
-
 			return Result(
 				URLComponents(string: suffix.map { $0.1 }.joined(separator: "/"))?
 					.url(relativeTo: frameworkURL.absoluteURL.appendingPathComponent("/")),
-				failWith: CarthageError.internalError(description: "∆∆∆")
+				failWith: CarthageError.internalError(description: "In attempt to read NSBundle «\(frameworkURL.absoluteString)»'s binary url, could not relativize «\($0.debugDescription)» against «\(frameworkURL.absoluteString)».")
 			)
 		}
 		.zip(with: FileManager.default.reactive.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX"))
@@ -1217,19 +1216,26 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 		}
 }
 
-/// Strips the given architecture from a framework.
-private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> SignalProducer<(), CarthageError> {
-	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
-		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
-			return lipoTask.launch()
+/// Strips the given architectures from a framework.
+private func stripArchitectures(_ packageURL: URL, _ architectures: Set<String>) -> SignalProducer<(), CarthageError> {
+	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
+		.flatMap(.merge) { binaryURL -> SignalProducer<(), CarthageError> in
+			let arguments = [
+				[ binaryURL.absoluteURL.path ],
+				architectures.flatMap { [ "-remove", $0 ] },
+				[ "-output",  binaryURL.absoluteURL.path ],
+			].reduce(into: ["lipo"]) { $0.append(contentsOf: $1) }
+
+			let lipoTask = Task("/usr/bin/xcrun", arguments: arguments)
+			return lipoTask
+				.launch()
 				.mapError(CarthageError.taskError)
+				.then(SignalProducer<(), CarthageError>.empty)
 		}
-		.then(SignalProducer<(), CarthageError>.empty)
 }
 
 // Returns a signal of all architectures present in a given package.
-private func architecturesInPackage(_ packageURL: URL, xcrunQuery: [String] = ["lipo", "-info"]) -> SignalProducer<[String], CarthageError> { 
+public func architecturesInPackage(_ packageURL: URL, xcrunQuery: [String] = ["lipo", "-info"]) -> SignalProducer<[String], CarthageError> {
 	let binaryURLResult = binaryURL(packageURL)
 	guard let binaryURL = binaryURLResult.value else { return SignalProducer(error: binaryURLResult.error!) }
 
@@ -1286,65 +1292,6 @@ private func architecturesInPackage(_ packageURL: URL, xcrunQuery: [String] = ["
 			return .failure(.invalidArchitectures(description: "Could not read architectures from \(packageURL.path)"))
 		}
 		.reduce(into: [] as [String]) { $0.append(contentsOf: $1 as [String]) }
-}
-
-/// Returns a signal of all architectures present in a given package.
-public func architecturesInPackage(_ packageURL: URL) -> SignalProducer<String, CarthageError> {
-	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
-		.flatMap(.merge) { binaryURL -> SignalProducer<String, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path])
-
-			return lipoTask.launch()
-				.ignoreTaskData()
-				.mapError(CarthageError.taskError)
-				.map { String(data: $0, encoding: .utf8) ?? "" }
-				.flatMap(.merge) { output -> SignalProducer<String, CarthageError> in
-					var characterSet = CharacterSet.alphanumerics
-					characterSet.insert(charactersIn: " _-")
-
-					let scanner = Scanner(string: output)
-
-					if scanner.scanString("Architectures in the fat file:", into: nil) {
-						// The output of "lipo -info PathToBinary" for fat files
-						// looks roughly like so:
-						//
-						//     Architectures in the fat file: PathToBinary are: armv7 arm64
-						//
-						var architectures: NSString?
-
-						scanner.scanString(binaryURL.path, into: nil)
-						scanner.scanString("are:", into: nil)
-						scanner.scanCharacters(from: characterSet, into: &architectures)
-
-						let components = architectures?
-							.components(separatedBy: " ")
-							.filter { !$0.isEmpty }
-
-						if let components = components {
-							return SignalProducer(components)
-						}
-					}
-
-					if scanner.scanString("Non-fat file:", into: nil) {
-						// The output of "lipo -info PathToBinary" for thin
-						// files looks roughly like so:
-						//
-						//     Non-fat file: PathToBinary is architecture: x86_64
-						//
-						var architecture: NSString?
-
-						scanner.scanString(binaryURL.path, into: nil)
-						scanner.scanString("is architecture:", into: nil)
-						scanner.scanCharacters(from: characterSet, into: &architecture)
-
-						if let architecture = architecture {
-							return SignalProducer(value: architecture as String)
-						}
-					}
-
-					return SignalProducer(error: .invalidArchitectures(description: "Could not read architectures from \(packageURL.path)"))
-				}
-		}
 }
 
 /// Strips debug symbols from the given framework
