@@ -653,6 +653,8 @@ public func createVersionFileForXCFramework(
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 
+    return SignalProducer(value: ())
+
 //	guard let bundle = Bundle(url: xcFrameworkURL) else {
 //		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle."))
 //	}

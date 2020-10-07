@@ -42,13 +42,13 @@ public struct XCFrameworkInfo {
 
 		guard let formatVersion = dictionary["XCFrameworkFormatVersion"] as? String,
 			let packageType = dictionary["CFBundlePackageType"] as? String,
-			let avalableLibraries = (dictionary["AvailableLibraries"] as? [[String : Any]])
+			let availableLibraries = (dictionary["AvailableLibraries"] as? [[String : Any]])
 				.flatMap({ libDicts in libDicts.compactMap(XCFrameworkLibrary.init) }) else {
 				return nil
 		}
 
 		self.formatVersion = formatVersion
 		self.packageTypeString = packageType
-		self.availableLibraries = avalableLibraries
+		self.availableLibraries = availableLibraries
 	}
 }
