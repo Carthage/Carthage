@@ -153,9 +153,23 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 }
 
 private func validArchitectures() -> Result<[String], CarthageError> {
-	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
-		return architectures.components(separatedBy: " ")
-	}
+    let validArchs = getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
+        return architectures.components(separatedBy: " ")
+    }
+
+    if validArchs.error != nil {
+        return validArchs
+    }
+
+    let archs = getEnvironmentVariable("ARCHS").map { architectures -> [String] in
+        return architectures.components(separatedBy: " ")
+    }
+
+    if archs.error != nil {
+        return archs
+    }
+
+    return .success(validArchs.value!.filter(archs.value!.contains))
 }
 
 private func buildActionIsArchiveOrInstall() -> Bool {
