@@ -985,6 +985,42 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 	}
 }
 
+public func copyAndStripFramework(
+	_ source: URL,
+	target: URL,
+	validArchitectures: [String],
+	strippingDebugSymbols: Bool = true,
+	queryingCodesignIdentityWith codesignIdentityQuery: SignalProducer<String?, CarthageError> = .init(value: nil),
+	copyingSymbolMapsInto symbolMapDestinationSignal: Result<URL, CarthageError>? = nil
+) -> SignalProducer<(), CarthageError> {
+	let strippedArchitectureData = architecturesInPackage(source)
+		.flatMap(.race) { (archs: [String]) in
+			nonDestructivelyStripArchitectures(source, Set(archs).subtracting(validArchitectures))
+		}
+
+	return SignalProducer.combineLatest(copyProduct(source, target), codesignIdentityQuery, strippedArchitectureData)
+		.flatMap(.merge) { url, codesigningIdentity, strippedArchitectureData -> SignalProducer<(), CarthageError> in
+			return SignalProducer(value: strippedArchitectureData.1.relativePath)
+				.attemptMap {
+					return Result(at: target.appendingPathComponent($0)) {
+						try strippedArchitectureData.0.write(to: $0)
+					}
+				}
+				.concat(strippingDebugSymbols ? stripDebugSymbols(target) : .empty)
+				.concat(stripHeadersDirectory(target))
+				.concat(stripPrivateHeadersDirectory(target))
+				.concat(stripModulesDirectory(target))
+				.concat(codesigningIdentity.map { codesign(target, $0) } ?? .empty)
+				.concat(
+					(symbolMapDestinationSignal?.producer ?? SignalProducer.empty)
+						.flatMap(.merge) {
+							BCSymbolMapsForFramework(source).copyFileURLsIntoDirectory($0)
+						}
+						.then(SignalProducer<(), CarthageError>.empty)
+				)
+		}
+}
+
 /// Strips a framework from unexpected architectures and potentially debug symbols,
 /// optionally codesigning the result.
 public func stripFramework(
@@ -1177,9 +1213,9 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 					}
 						.fanout(.success(relativeBinaryURL))
 				}
-			}
+
+			return task.then(result)
 		}
-	}
 }
 
 /// Strips the given architectures from a framework.
