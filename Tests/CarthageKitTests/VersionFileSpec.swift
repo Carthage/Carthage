@@ -54,10 +54,11 @@ class VersionFileSpec: QuickSpec {
 							linking: .dynamic,
 							swiftToolchainVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)")
 			let versionFile = VersionFile(commitish: "v1.0",
-						      macOS: nil,
-						      iOS: [framework],
-						      watchOS: nil,
-						      tvOS: nil)
+																		macOS: nil,
+																		iOS: [framework],
+																		watchOS: nil,
+																		tvOS: nil,
+																		xcFramework: nil)
 
 			let versionFileURL = Bundle(for: type(of: self)).resourceURL!.appendingPathComponent("TestWriteVersionFile")
 

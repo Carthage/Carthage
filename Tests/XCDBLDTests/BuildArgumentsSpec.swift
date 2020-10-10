@@ -44,7 +44,7 @@ class BuildArgumentsSpec: QuickSpec {
 		}
 
 		describe("rawArguments") {
-			func itCreatesBuildArguments(_ message: String, rawArguments: [String], configure: @escaping (inout BuildArguments) -> Void) {
+			func itCreatesRawBuildArguments(_ message: String, rawArguments: [String], configure: @escaping (inout BuildArguments) -> Void) {
 				let workspace = ProjectLocator.workspace(URL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
 				let project = ProjectLocator.projectFile(URL(string: "file:///Foo/Bar/project.xcodeproj")!)
 
@@ -81,25 +81,25 @@ class BuildArgumentsSpec: QuickSpec {
 				}
 			}
 
-			itCreatesBuildArguments("has a default set of arguments", rawArguments: []) { _ in }
+			itCreatesRawBuildArguments("has a default set of arguments", rawArguments: []) { _ in }
 
-			itCreatesBuildArguments("includes the scheme if one is given", rawArguments: ["-scheme", "exampleScheme"]) { subject in
+			itCreatesRawBuildArguments("includes the scheme if one is given", rawArguments: ["-scheme", "exampleScheme"]) { subject in
 				subject.scheme = Scheme("exampleScheme")
 			}
 
-			itCreatesBuildArguments("includes the configuration if one is given", rawArguments: ["-configuration", "exampleConfiguration"]) { subject in
+			itCreatesRawBuildArguments("includes the configuration if one is given", rawArguments: ["-configuration", "exampleConfiguration"]) { subject in
 				subject.configuration = "exampleConfiguration"
 			}
 
-			itCreatesBuildArguments("includes the derived data path", rawArguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { subject in
+			itCreatesRawBuildArguments("includes the derived data path", rawArguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { subject in
 				subject.derivedDataPath = "/path/to/derivedDataPath"
 			}
 
-			itCreatesBuildArguments("includes empty derived data path", rawArguments: []) { subject in
+			itCreatesRawBuildArguments("includes empty derived data path", rawArguments: []) { subject in
 				subject.derivedDataPath = ""
 			}
 
-			itCreatesBuildArguments("includes the the toolchain", rawArguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
+			itCreatesRawBuildArguments("includes the the toolchain", rawArguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
 				subject.toolchain = "org.swift.3020160509a"
 			}
 
