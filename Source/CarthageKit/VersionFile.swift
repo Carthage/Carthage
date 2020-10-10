@@ -218,19 +218,22 @@ public struct VersionFile: Codable {
 				)
 
 				return frameworkBundlesInURL(frameworkURL)
-					.take(first: 1)
 					.mapError { CarthageError.readFailed(frameworkURL, $0 as NSError) }
 					.flatMap(.concat) { framework -> SignalProducer<Bool, CarthageError> in
-					if !isSwiftFramework(framework.bundleURL) {
-						return SignalProducer(value: true)
-					} else {
-						return frameworkSwiftVersion(framework.bundleURL)
-							.map { swiftVersion -> Bool in
-								return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
-							}
-							.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+						if !isSwiftFramework(framework.bundleURL) {
+							return SignalProducer(value: true)
+						} else {
+							return frameworkSwiftVersion(framework.bundleURL)
+								.map { swiftVersion -> Bool in
+									return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
+								}
+								.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+						}
 					}
-				}
+					// Send false if there are no `frameworks` at frameworkURL, otherwise send whether an arbitrary framework
+					// in the bundle matches the swift version.
+					.concat(value: false)
+					.take(first: 1)
 			}
 	}
 
@@ -526,7 +529,7 @@ public func createVersionFileForCommitish(
 				let detail = frameworkBundlesInURL(url)
 					.mapError { _ in CarthageError.readFailed(url, nil) }
 					.flatMap(.concat) { bundle -> SignalProducer<FrameworkDetail, CarthageError> in
-						frameworkSwiftVersion(bundle.bundleURL)
+						frameworkSwiftVersionIfIsSwiftFramework(bundle.bundleURL)
 							.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
 							.map { frameworkSwiftVersion in
 								FrameworkDetail(

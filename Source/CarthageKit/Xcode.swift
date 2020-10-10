@@ -800,9 +800,9 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
+	argsForLoading.onlyActiveArchitecture = false
 
 	var argsForBuilding = argsForLoading
-	argsForBuilding.onlyActiveArchitecture = false
 
 	// If SDK is the iOS simulator, then also find and set a valid destination.
 	// This fixes problems when the project deployment version is lower than
