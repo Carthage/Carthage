@@ -306,7 +306,7 @@ public struct BuildSettings {
 
 	/// The "OPERATING_SYSTEM" component of the target triple. Used in XCFrameworks to denote the supported platform.
 	public var platformTripleOS: Result<String, CarthageError> {
-		self["LLVM_TARGET_TRIPLE_OS_VERSION"].map { osVersion in
+		return self["LLVM_TARGET_TRIPLE_OS_VERSION"].map { osVersion in
 			// osVersion is a string like "ios8.0". Remove any trailing version number.
 			// This should match the OS component of an "unversionedTriple" printed by `swift -print-target-info`.
 			osVersion.replacingOccurrences(of: "([0-9]\\.?)*$", with: "", options: .regularExpression)
