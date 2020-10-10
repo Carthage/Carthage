@@ -413,22 +413,14 @@ extension Reactive where Base: FileManager {
 	///
 	/// The template name should adhere to the format required by the mkdtemp()
 	/// function.
-  ///
-  /// The `destinationURL` parameter is the URL of the destination item that is to be copied. It is used to create a temporary directory that is on the same filesystem as the destination in order to avoid cross-device file operations.
-    public func createTemporaryDirectoryWithTemplate(_ template: String, destinationURL: URL) -> SignalProducer<URL, CarthageError> {
+	public func createTemporaryDirectoryWithTemplate(_ template: String) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer { [base = self.base] () -> Result<String, CarthageError> in
-      let temporaryDirectory: NSString
-      do {
-        temporaryDirectory = try base.url(
-          for: .itemReplacementDirectory,
-          in: .userDomainMask,
-          appropriateFor: destinationURL,
-          create: true
-        )
-        .path as NSString
-      } catch {
-        return .failure(.internalError(description: error.localizedDescription))
-      }
+			let temporaryDirectory: NSString
+			if #available(macOS 10.12, *) {
+				temporaryDirectory = base.temporaryDirectory.path as NSString
+			} else {
+				temporaryDirectory = NSTemporaryDirectory() as NSString
+			}
 
 			var temporaryDirectoryTemplate: ContiguousArray<CChar> = temporaryDirectory.appendingPathComponent(template).utf8CString
 
@@ -449,27 +441,6 @@ extension Reactive where Base: FileManager {
 		}
 		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 	}
-  
-  public func copyItem(_ source: URL, into: URL) -> SignalProducer<URL, CarthageError> {
-    let destination = into.appendingPathComponent(source.lastPathComponent)
-    do {
-      try self.base.copyItem(at: source, to: destination, avoiding·rdar·32984063: true)
-      return SignalProducer(value: destination)
-    } catch {
-      return SignalProducer(error: .internalError(description: "copyItem failed: \(error)\n\(source)\n\(into)"))
-    }
-  }
-
-  public func replaceItem(at originalItemURL: URL, withItemAt newItemURL: URL) -> SignalProducer<(), CarthageError> {
-    do {
-      guard (try self.base.replaceItemAt(originalItemURL, withItemAt: newItemURL, backupItemName: nil, options: .usingNewMetadataOnly)) != nil else {
-        return SignalProducer(error: .internalError(description: "replaceItem succeeded, but returned nil"))
-      }
-      return SignalProducer(.empty)
-    } catch {
-      return SignalProducer(error: .internalError(description: "replaceItem failed: \(error)"))
-    }
-  }
 }
 
 private let defaultSessionError = NSError(domain: Constants.bundleIdentifier, code: 1, userInfo: nil)

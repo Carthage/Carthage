@@ -6,6 +6,8 @@ Carthage is intended to be the simplest way to add frameworks to your Cocoa appl
 
 Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
+# [Xcode >= 12 Workaround Guide - Follow this link](Documentation/Xcode12Workaround.md)
+
 - [Quick Start](#quick-start)
 - [Installing Carthage](#installing-carthage)
 - [Adding frameworks to an application](#adding-frameworks-to-an-application)
