@@ -527,7 +527,12 @@ private func shouldBuildScheme(
 		.reduce(into: false) { shouldBuild, setOfSDKsAndBuildSetings in
 			let (sdks, settings) = setOfSDKsAndBuildSetings
 			let allSDKs = (platformAllowList ?? sdks)
-			shouldBuild = shouldBuild || (useXCFrameworks && settings.supportsXCFrameworks.recover(false) && !sdks.intersection(allSDKs).isEmpty)
+
+			shouldBuild = shouldBuild || !sdks.intersection(allSDKs).isEmpty
+
+			if useXCFrameworks {
+				shouldBuild = shouldBuild && settings.supportsXCFrameworks.recover(false)
+			}
 		}
 }
 
