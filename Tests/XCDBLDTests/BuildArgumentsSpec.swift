@@ -6,7 +6,7 @@ import XCDBLD
 class BuildArgumentsSpec: QuickSpec {
 	override func spec() {
 
-		func itCreatesBuildArguments(_ message: String, arguments: [String], compareTo: KeyPath<BuildArguments, [String]> = \.rawArguments, configure: @escaping (inout BuildArguments) -> Void) {
+		func itCreatesBuildArguments(_ message: String, arguments: [String], compareTo: KeyPath<BuildArguments, [String]> = \.arguments, configure: @escaping (inout BuildArguments) -> Void) {
 			let workspace = ProjectLocator.workspace(URL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
 			let project = ProjectLocator.projectFile(URL(string: "file:///Foo/Bar/project.xcodeproj")!)
 
@@ -43,66 +43,46 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 		}
 
-		describe("rawArguments") {
-			func itCreatesRawBuildArguments(_ message: String, rawArguments: [String], configure: @escaping (inout BuildArguments) -> Void) {
-				let workspace = ProjectLocator.workspace(URL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
-				let project = ProjectLocator.projectFile(URL(string: "file:///Foo/Bar/project.xcodeproj")!)
+		describe("argumens_and_rawArguments") {
 
-				let codeSignArguments = [
-					"CODE_SIGNING_REQUIRED=NO",
-					"CODE_SIGN_IDENTITY=",
-					"CARTHAGE=YES",
-				]
+			itCreatesBuildArguments("has a default set of arguments", arguments: []) { _ in }
 
-				context("when configured with a workspace") {
-					it(message) {
-						var subject = BuildArguments(project: workspace)
-						configure(&subject)
-
-						expect(subject.rawArguments) == [
-							"xcodebuild",
-							"-workspace",
-							"/Foo/Bar/workspace.xcworkspace",
-							] + rawArguments + codeSignArguments
-					}
-				}
-
-				context("when configured with a project") {
-					it(message) {
-						var subject = BuildArguments(project: project)
-						configure(&subject)
-
-						expect(subject.rawArguments) == [
-							"xcodebuild",
-							"-project",
-							"/Foo/Bar/project.xcodeproj",
-							] + rawArguments + codeSignArguments
-					}
-				}
-			}
-
-			itCreatesRawBuildArguments("has a default set of arguments", rawArguments: []) { _ in }
-
-			itCreatesRawBuildArguments("includes the scheme if one is given", rawArguments: ["-scheme", "exampleScheme"]) { subject in
+			itCreatesBuildArguments("includes the scheme if one is given", arguments: ["-scheme", "exampleScheme"]) { subject in
 				subject.scheme = Scheme("exampleScheme")
 			}
 
-			itCreatesRawBuildArguments("includes the configuration if one is given", rawArguments: ["-configuration", "exampleConfiguration"]) { subject in
+			itCreatesBuildArguments("includes the configuration if one is given", arguments: ["-configuration", "exampleConfiguration"]) { subject in
 				subject.configuration = "exampleConfiguration"
 			}
 
-			itCreatesRawBuildArguments("includes the derived data path", rawArguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { subject in
+			itCreatesBuildArguments("includes the derived data path", arguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { subject in
 				subject.derivedDataPath = "/path/to/derivedDataPath"
 			}
 
-			itCreatesRawBuildArguments("includes empty derived data path", rawArguments: []) { subject in
+			itCreatesBuildArguments("includes empty derived data path", arguments: []) { subject in
 				subject.derivedDataPath = ""
 			}
 
-			itCreatesRawBuildArguments("includes the the toolchain", rawArguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
+			itCreatesBuildArguments("includes the the toolchain", arguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
 				subject.toolchain = "org.swift.3020160509a"
 			}
 
+				itCreatesBuildArguments("includes the destination if given", arguments: ["-destination", "exampleDestination"]) { subject in
+					subject.destination = "exampleDestination"
+				}
+
+				describe("specifying onlyActiveArchitecture") {
+					itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=YES if it's set to true", arguments: ["ONLY_ACTIVE_ARCH=YES"]) { subject in
+						subject.onlyActiveArchitecture = true
+					}
+
+					itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=NO if it's set to false", arguments: ["ONLY_ACTIVE_ARCH=NO"]) { subject in
+						subject.onlyActiveArchitecture = false
+					}
+			}
+		}
+
+		describe("arguments") {
 			describe("specifying the sdk") {
 				let macosx = SDK.knownIn2019YearSDKs.first(where: { $0.rawValue == "macosx" })!
 
@@ -122,18 +102,15 @@ class BuildArgumentsSpec: QuickSpec {
 					subject.sdk = macosx
 				}
 			}
+		}
 
-			itCreatesBuildArguments("includes the destination if given", arguments: ["-destination", "exampleDestination"]) { subject in
-				subject.destination = "exampleDestination"
-			}
+		describe("rawArguments") {
+			describe("specifying the sdk") {
 
-			describe("specifying onlyActiveArchitecture") {
-				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=YES if it's set to true", arguments: ["ONLY_ACTIVE_ARCH=YES"]) { subject in
-					subject.onlyActiveArchitecture = true
-				}
-
-				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=NO if it's set to false", arguments: ["ONLY_ACTIVE_ARCH=NO"]) { subject in
-					subject.onlyActiveArchitecture = false
+				for sdk in SDK.knownIn2019YearSDKs {
+					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue], compareTo: \.rawArguments) { subject in
+						subject.sdk = sdk
+					}
 				}
 			}
 		}
