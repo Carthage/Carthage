@@ -795,6 +795,44 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 	}
 }
 
+/// Using target architecture information in `settings`, copy platform-specific framework bundles from all
+/// xcframeworks in `buildDirectory` to a temporary directory.
+///
+/// The extracted frameworks are used to support building projects which are not configured to use XCFramework products
+/// from their Carthage/Build directory.
+///
+/// Sends the temporary directory or `nil` if there are no xcframeworks to extract.
+func extractXCFrameworks(in buildDirectory: URL, for settings: BuildSettings) -> SignalProducer<URL?, CarthageError> {
+	guard let platformTripleOS = settings.platformTripleOS.value,
+				(try? buildDirectory.checkResourceIsReachable()) == true
+	else {
+		return SignalProducer(value: nil)
+	}
+
+	let fileManager = FileManager.default.reactive
+	let staticBuildDirectory = buildDirectory.appendingPathComponent(FrameworkType.staticFolderName)
+	let temporaryDirectory = fileManager.createTemporaryDirectoryWithTemplate("carthage-xcframeworks-XXXX", destinationURL: buildDirectory)
+
+	let frameworks = fileManager.enumerator(at: buildDirectory, options: .skipsSubdirectoryDescendants, catchErrors: true)
+		.merge(with: fileManager.enumerator(at: staticBuildDirectory, options: .skipsSubdirectoryDescendants, catchErrors: true))
+		.flatMap(.merge) { _, url -> SignalProducer<URL, CarthageError> in
+			guard url.pathExtension == "xcframework" else { return .empty }
+
+			return frameworkBundlesInURL(url, compatibleWith: platformTripleOS, variant: settings.platformTripleVariant.value)
+				.mapError { CarthageError.readFailed(url, $0 as NSError) }
+				.map { $0.bundleURL }
+		}
+
+	// Copy frameworks into the temporary directory. Send its URL once if _any_ frameworks were copied, or `nil` if
+	// no matching frameworks were found.
+	return temporaryDirectory.flatMap(.concat) { temporaryDirectoryURL in
+		frameworks.copyFileURLsIntoDirectory(temporaryDirectoryURL).map { _ in temporaryDirectoryURL }
+	}
+	.concat(value: nil)
+	.collect()
+	.map { $0.first! }
+}
+
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
 // swiftlint:disable:next function_body_length
 private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
@@ -861,7 +899,17 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				}
 				.flatMap(.concat) { settings in resolveSameTargetName(for: settings) }
 				.collect()
-				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
+				.flatMap(.concat) { settings -> SignalProducer<([BuildSettings], URL?), CarthageError> in
+					// Use the build settings of an arbitrary target to extract platform-specific frameworks from any xcframeworks.
+					// Theoretically, different targets in the scheme could map to different LLVM targets, but it's hard to
+					// imagine how that would work since they are all building to the same destination.
+					guard let firstTargetSettings = settings.first else { return .empty }
+					let buildDirectoryURL = workingDirectoryURL
+						.appendingPathComponent(Constants.binariesFolderPath)
+						.appendingPathComponent(sdk.platformSimulatorlessFromHeuristic)
+					return extractXCFrameworks(in: buildDirectoryURL, for: firstTargetSettings).map { (settings, $0) }
+				}
+				.flatMap(.concat) { settings, extractedXCFrameworksDir -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 					let actions: [String] = {
 						var result: [String] = [xcodebuildAction.rawValue]
 
@@ -889,6 +937,15 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 								// Disable the "Strip Linked Product" build
 								// setting so we can later generate a dSYM
 								"STRIP_INSTALLED_PRODUCT=NO",
+							]
+						}
+
+						if let extractedXCFrameworksDir = extractedXCFrameworksDir {
+							// If the project's working directory contains xcframeworks in Carthage/Build, target-specific
+							// frameworks will have been extracted to a temporary directory. Provide these frameworks as a fallback
+							// in case the project is not configured to build using xcframeworks.
+							result += [
+								"FRAMEWORK_SEARCH_PATHS=$(inherited) \"\(extractedXCFrameworksDir.path)\""
 							]
 						}
 

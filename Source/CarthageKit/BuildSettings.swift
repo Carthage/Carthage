@@ -304,6 +304,26 @@ public struct BuildSettings {
 		return self["TARGET_BUILD_DIR"]
 	}
 
+	/// The "OPERATING_SYSTEM" component of the target triple. Used in XCFrameworks to denote the supported platform.
+	public var platformTripleOS: Result<String, CarthageError> {
+		self["LLVM_TARGET_TRIPLE_OS_VERSION"].map { osVersion in
+			// osVersion is a string like "ios8.0". Remove any trailing version number.
+			// This should match the OS component of an "unversionedTriple" printed by `swift -print-target-info`.
+			osVersion.replacingOccurrences(of: "([0-9]\\.?)*$", with: "", options: .regularExpression)
+		}.flatMapError { _ in
+			// LLVM_TARGET_TRIPLE_OS_VERSION may be unavailable if `USE_LLVM_TARGET_TRIPLES = NO`.
+			// SWIFT_PLATFORM_TARGET_PREFIX anecdotally appears to contain the unversioned OS component, even in
+			// non-swift projects.
+			self["SWIFT_PLATFORM_TARGET_PREFIX"]
+		}
+	}
+
+	// The "ENVIRONMENT" component of the target triple, which is "simulator" when building for a simulator target
+	// and missing otherwise.
+	public var platformTripleVariant: Result<String, CarthageError> {
+		return self["LLVM_TARGET_TRIPLE_SUFFIX"].map { $0.stripping(prefix: "-") }
+	}
+
 	/// Add subdirectory path if it's not possible to paste product to destination path
 	public func productDestinationPath(in destinationURL: URL) -> URL {
 		let directoryURL: URL
