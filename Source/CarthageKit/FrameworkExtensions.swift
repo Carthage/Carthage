@@ -437,6 +437,15 @@ extension Reactive where Base: FileManager {
       return SignalProducer(error: .internalError(description: "replaceItem failed: \(error)"))
     }
   }
+
+	/// Removes the file located at the given URL
+	///
+	/// Sends empty value on successful removal
+	public func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
+		return SignalProducer {
+			Result(at: url, attempt: FileManager.default.removeItem(at:))
+		}
+	}
 }
 
 private let defaultSessionError = NSError(domain: Constants.bundleIdentifier, code: 1, userInfo: nil)
