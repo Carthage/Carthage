@@ -8,6 +8,8 @@ import XCDBLD
 public struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
+		case container = "container"
+		case libraryIdentifier = "identifier"
 		case hash = "hash"
 		case linking = "linking"
 		case swiftToolchainVersion = "swiftToolchainVersion"
@@ -15,6 +17,8 @@ public struct CachedFramework: Codable {
 
 	/// Name of the framework
 	public let name: String
+	public let container: String?
+	public let libraryIdentifier: String?
 	/// Hash of the framework
 	public let hash: String
     /// The linking type of the framework. One of `dynamic` or `static`. Defaults to `dynamic`
@@ -27,21 +31,21 @@ public struct CachedFramework: Codable {
 	}
 
 	/// The framework's expected location within a platform directory.
-	var relativeFrameworkPath: String {
-		switch linking {
-		case .some(.static):
-			return "\(FrameworkType.staticFolderName)/\(name).framework"
-		default:
-			return "\(name).framework"
+	func location(in buildDirectory: URL, sdk: SDK) -> URL {
+		if let container = container, let libraryIdentifier = libraryIdentifier {
+			return buildDirectory
+				.appendingPathComponent(container)
+				.appendingPathComponent(libraryIdentifier)
+				.appendingPathComponent("\(name).framework")
 		}
-	}
-
-	var relativeXCFrameworkPath: String {
+		let platformDirectory = buildDirectory.appendingPathComponent(sdk.platformSimulatorlessFromHeuristic)
 		switch linking {
 		case .some(.static):
-			return "\(FrameworkType.staticFolderName)/\(name).xcframework"
+			return platformDirectory
+				.appendingPathComponent(FrameworkType.staticFolderName)
+				.appendingPathComponent("\(name).framework")
 		default:
-			return "\(name).xcframework"
+			return platformDirectory.appendingPathComponent("\(name).framework")
 		}
 	}
 }
@@ -139,37 +143,25 @@ public struct VersionFile: Codable {
 		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
-		let buildDirectory = binariesDirectoryURL
-			.appendingPathComponent(platform.platformSimulatorlessFromHeuristic, isDirectory: true)
-			.resolvingSymlinksInPath()
-
-		let xcframework = buildDirectory.appendingPathComponent(cachedFramework.relativeXCFrameworkPath, isDirectory: true)
-		if (try? xcframework.checkResourceIsReachable()) ?? false {
-			return xcframework
-		} else {
-			return buildDirectory.appendingPathComponent(cachedFramework.relativeFrameworkPath, isDirectory: true)
-		}
+		return cachedFramework.location(in: binariesDirectoryURL, sdk: platform)
 	}
 
-	/// Calculates the path of the binary or binaries inside the framework corresponding with a version file
+	/// Calculates the path of the binary inside the framework corresponding with a version file
 	/// - Parameters:
 	///   - cachedFramework: the cached framework used to calculate the path
 	///   - platform: the platform to use
 	///   - binariesDirectoryURL: the binaries directory
-	public func frameworkBinaryURLs(
+	public func frameworkBinaryURL(
 		for cachedFramework: CachedFramework,
 		platform: SDK,
 		binariesDirectoryURL: URL
-	) -> SignalProducer<URL, NoError> {
-		return frameworkBundlesInURL(
-			frameworkURL(
-				for: cachedFramework,
-				platform: platform,
-				binariesDirectoryURL: binariesDirectoryURL
-			)
+	) -> URL {
+		return frameworkURL(
+			for: cachedFramework,
+			platform: platform,
+			binariesDirectoryURL: binariesDirectoryURL
 		)
-		.filterMap { $0.executableURL }
-		.flatMapError { _ in .empty }
+			.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
 	}
 
 	/// Sends the hashes of the provided cached framework's binaries in the
@@ -181,13 +173,13 @@ public struct VersionFile: Codable {
 	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
-				let frameworkBinaryURLs = self.frameworkBinaryURLs(
+				let frameworkBinaryURL = self.frameworkBinaryURL(
 					for: cachedFramework,
 					platform: platform,
 					binariesDirectoryURL: binariesDirectoryURL
 				)
 
-				return hashOfFiles(atURLs: frameworkBinaryURLs.promoteError())
+				return hashForFileAtURL(frameworkBinaryURL)
 					.map { hash -> String? in
 						return hash
 					}
@@ -494,64 +486,73 @@ public func createVersionFileForCommitish(
 	}
 
 	struct FrameworkDetail {
-		let platformName: String
 		let frameworkName: String
+		let frameworkLocator: FrameworkLocator
 		let frameworkSwiftVersion: String?
-		let frameworkType: FrameworkType
+	}
+	enum FrameworkLocator {
+		case xcframework(name: String, libraryIdentifier: String)
+		case platformDirectory(name: String, linking: FrameworkType)
 	}
 
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
-			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
+			.skipRepeats()
+			.flatMap(.merge, { url -> SignalProducer<(URL, URL), CarthageError> in
+				return frameworkBundlesInURL(url)
+					.map { ($0.bundleURL, url) }
+					.flatMapError { _ in .empty }
+			})
+			.flatMap(.merge) { url, containerURL -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 				let frameworkName: String
-				let platformName: String
-				let frameworkType: FrameworkType
+				let frameworkLocator: FrameworkLocator
 				switch (
 					url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
 					url.deletingLastPathComponent().lastPathComponent,
 					url.deletingPathExtension().lastPathComponent
 				) {
+				case (containerURL.lastPathComponent, let libraryIdentifier, let name):
+					frameworkName = name
+					frameworkLocator = .xcframework(name: containerURL.lastPathComponent, libraryIdentifier: libraryIdentifier)
 				case (let platform, FrameworkType.staticFolderName, let name):
 					frameworkName = name
-					platformName = platform
-					frameworkType = .static
+					frameworkLocator = .platformDirectory(name: platform, linking: .static)
 				case (_, let platform, let name):
 					frameworkName = name
-					platformName = platform
-					frameworkType = .dynamic
+					frameworkLocator = .platformDirectory(name: platform, linking: .dynamic)
 				}
 
-				let hash = hashOfFiles(
-					atURLs: frameworkBundlesInURL(url)
-						.mapError { _ in CarthageError.readFailed(url, nil) }
-						.map { $0.executableURL! }
-				)
-				let detail = frameworkBundlesInURL(url)
-					.mapError { _ in CarthageError.readFailed(url, nil) }
-					.flatMap(.concat) { bundle -> SignalProducer<FrameworkDetail, CarthageError> in
-						frameworkSwiftVersionIfIsSwiftFramework(bundle.bundleURL)
-							.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
-							.map { frameworkSwiftVersion in
-								FrameworkDetail(
-									platformName: platformName,
-									frameworkName: frameworkName,
-									frameworkSwiftVersion: frameworkSwiftVersion,
-									frameworkType: frameworkType
-								)
-							}
-					}
-
-				return hash.combineLatest(with: detail)
+				return frameworkSwiftVersionIfIsSwiftFramework(url)
+					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
+					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
+						let frameworkDetail = FrameworkDetail(
+							frameworkName: frameworkName,
+							frameworkLocator: frameworkLocator,
+							frameworkSwiftVersion: frameworkSwiftVersion
+						)
+						let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
+						let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+						return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
+				}
 			}
 			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
 				let hash = values.0
-				let platformName = values.1.platformName
 				let frameworkName = values.1.frameworkName
 				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
-				let frameworkType = values.1.frameworkType
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, linking: frameworkType, swiftToolchainVersion: frameworkSwiftVersion)
-				if var frameworks = platformCaches[platformName] {
+				let cachedFramework: CachedFramework
+				let platformName: String?
+
+				switch values.1.frameworkLocator {
+				case .platformDirectory(name: let name, linking: let linking):
+					platformName = name
+					cachedFramework = CachedFramework(name: frameworkName, container: nil, libraryIdentifier: nil, hash: hash, linking: linking, swiftToolchainVersion: frameworkSwiftVersion)
+				case .xcframework(name: let container, libraryIdentifier: let identifier):
+					let targetOS = identifier.components(separatedBy: "-")[0]
+					platformName = SDK.associatedSetOfKnownIn2019YearSDKs(targetOS).first?.platformSimulatorlessFromHeuristic
+					cachedFramework = CachedFramework(name: frameworkName, container: container, libraryIdentifier: identifier, hash: hash, linking: nil, swiftToolchainVersion: frameworkSwiftVersion)
+				}
+				if let platformName = platformName, var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
 				}
@@ -621,33 +622,22 @@ public func versionFileMatches(
 		}
 }
 
-private func hashOfFiles(atURLs urls: SignalProducer<URL, CarthageError>) -> SignalProducer<String, CarthageError> {
-	let task = Task("/usr/bin/shasum", arguments: ["-a", "256"])
-	let data = urls.attemptMap { url -> Result<Data, CarthageError> in
-		do {
-			return .success(try Data(contentsOf: url))
-		} catch {
-			return .failure(.readFailed(url, error as NSError))
-		}
+private func hashForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
+	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
+		return SignalProducer(error: .readFailed(frameworkFileURL, nil))
 	}
 
-	return SignalProducer<String, CarthageError> { observer, lifetime in
-		data.startWithSignal { signal, disposable in
-			// Task.launch(…) takes a SignalProducer<Data, NoError>, but we _do_ want to fail the SignalProducer when
-			// something reading the input files fails.
-			lifetime += signal.observeFailed(observer.send(error:))
-			lifetime += task.launch(standardInput: SignalProducer(signal.flatMapError { _ in .empty }))
-				.mapError(CarthageError.taskError)
-				.ignoreTaskData()
-				.attemptMap { data in
-					guard let taskOutput = String(data: data, encoding: .utf8) else {
-						return .failure(.internalError(description: "Unexpected output from shasum"))
-					}
+	let task = Task("/usr/bin/shasum", arguments: ["-a", "256", frameworkFileURL.path])
 
-					let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
-					return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
-				}
-				.start(observer)
+	return task.launch()
+		.mapError(CarthageError.taskError)
+		.ignoreTaskData()
+		.attemptMap { data in
+			guard let taskOutput = String(data: data, encoding: .utf8) else {
+				return .failure(.readFailed(frameworkFileURL, nil))
+			}
+
+			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
+			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
 		}
-	}
 }
