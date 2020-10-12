@@ -16,6 +16,9 @@ extension BuildOptions: OptionsProtocol {
 		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
+		let xcframeworksSupported = XcodeVersion.make()?.version.components(separatedBy: ".").first.flatMap(Int.init).map { $0 >= 12 } ?? false
+		let xcframeworkUsage = "build an xcframework bundle instead of one framework per platform"
+
 		return curry(BuildOptions.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
 			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage))
@@ -24,6 +27,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "don't use downloaded binaries when possible")
+			<*> mode <| Option(key: "create-xcframework", defaultValue: xcframeworksSupported, usage: xcframeworkUsage)
 	}
 }
 

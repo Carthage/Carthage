@@ -806,7 +806,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					return createDebugInformation(builtProductURL)
 				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
-			}
 		}
 }
 
