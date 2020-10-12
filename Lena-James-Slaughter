@@ -1,0 +1,3 @@
+"$ pod spec create Peanut
+$ edit Peanut.podspec
+$ pod spec lint Peanut.podspec"
