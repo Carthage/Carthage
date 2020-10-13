@@ -722,6 +722,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
+	/// Removes the file located at the given URL
+	///
+	/// Sends empty value on successful removal
+	private func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
+		return SignalProducer {
+			Result(at: url, attempt: FileManager.default.removeItem(at:))
+		}
+	}
+
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
@@ -744,7 +753,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				.flatMap(.concat) {
 					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
 				}
-				.flatMap(.concat) { FileManager.default.reactive.removeItem(at: $0) }
+				.flatMap(.concat) { self.removeItem(at: $0) }
 				.map { true }
 				.flatMapError { error in
 					self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: dependency, error: error))
@@ -1008,7 +1017,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						try? FileManager.default.removeItem(at: zipFile)
 					})
 			}
-			.flatMap(.concat) { FileManager.default.reactive.removeItem(at: $0) }
+			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
 	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
