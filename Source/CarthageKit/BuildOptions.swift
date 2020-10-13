@@ -26,7 +26,7 @@ public struct BuildOptions {
 		derivedDataPath: String? = nil,
 		cacheBuilds: Bool = true,
 		useBinaries: Bool = true,
-		createXCFramework: Bool = true
+		createXCFramework: Bool = false
 	) {
 		self.configuration = configuration
 		self.platforms = platforms
