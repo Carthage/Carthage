@@ -209,23 +209,15 @@ public struct VersionFile: Codable {
 					binariesDirectoryURL: binariesDirectoryURL
 				)
 
-				return frameworkBundlesInURL(frameworkURL)
-					.mapError { CarthageError.readFailed(frameworkURL, $0 as NSError) }
-					.flatMap(.concat) { framework -> SignalProducer<Bool, CarthageError> in
-						if !isSwiftFramework(framework.bundleURL) {
-							return SignalProducer(value: true)
-						} else {
-							return frameworkSwiftVersion(framework.bundleURL)
-								.map { swiftVersion -> Bool in
-									return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
-								}
-								.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+				if !isSwiftFramework(frameworkURL) {
+					return SignalProducer(value: true)
+				} else {
+					return frameworkSwiftVersion(frameworkURL)
+						.map { swiftVersion -> Bool in
+							return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
 						}
-					}
-					// Send false if there are no `frameworks` at frameworkURL, otherwise send whether an arbitrary framework
-					// in the bundle matches the swift version.
-					.concat(value: false)
-					.take(first: 1)
+						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+				}
 			}
 	}
 
