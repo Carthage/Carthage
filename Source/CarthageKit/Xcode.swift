@@ -596,9 +596,12 @@ private func mergeBuildProducts(
 		}
 }
 
-/// Extracts the built product and debug information from a build described by `settings` and adds it to
-/// `xcframeworkURL`. Sends `xcframeworkURL` when complete.
-private func mergeIntoXCFramework(_ xcframeworkURL: URL, settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
+/// Extracts the built product and debug information from a build described by `settings` and adds it to an xcframework
+/// in `directoryURL`. Sends the xcframework's URL when complete.
+private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
+	let xcframework = SignalProducer(result: settings.productName).map { productName in
+		directoryURL.appendingPathComponent(productName).appendingPathExtension("xcframework")
+	}
 	let framework = SignalProducer(result: settings.wrapperURL.map({ $0.resolvingSymlinksInPath() }))
 	let buildDSYMs = SignalProducer(result: settings.wrapperURL).flatMap(.concat, createDebugInformation)
 		.ignoreTaskData()
@@ -612,40 +615,43 @@ private func mergeIntoXCFramework(_ xcframeworkURL: URL, settings: BuildSettings
 	let platformName = SignalProducer(result: settings.platformTripleOS)
 	let fileManager = FileManager.default
 
-	let temporaryDirectory = try? fileManager.url(
-		for: .itemReplacementDirectory,
-		in: .userDomainMask,
-		appropriateFor: xcframeworkURL,
-		create: true
-	)
-	let outputURL = temporaryDirectory.map { $0.appendingPathComponent(xcframeworkURL.lastPathComponent) } ?? xcframeworkURL
-
 	return SignalProducer.combineLatest(
 		framework,
 		buildDebugSymbols,
-		platformName
-	).flatMap(.concat) { frameworkURL, debugSymbols, platformName -> SignalProducer<URL, CarthageError> in
-		mergeIntoXCFramework(
+		platformName,
+		xcframework
+	).flatMap(.concat) { frameworkURL, debugSymbols, platformName, xcframeworkURL -> SignalProducer<URL, CarthageError> in
+		// If xcframeworkURL doesn't exist yet (i.e. we're creating a new xcframework rather than merging into an existing
+		// one), creating temporaryDirectory will fail, we'll set outputURL to xcframeworkURL, and we'll skip the call to
+		// replaceItemAt(_:withItemAt:) below.
+		let temporaryDirectory = try? fileManager.url(
+			for: .itemReplacementDirectory,
+			in: .userDomainMask,
+			appropriateFor: xcframeworkURL,
+			create: true
+		)
+		let outputURL = temporaryDirectory.map { $0.appendingPathComponent(xcframeworkURL.lastPathComponent) } ?? xcframeworkURL
+
+		return mergeIntoXCFramework(
 			xcframeworkURL,
 			framework: frameworkURL,
 			debugSymbols: debugSymbols,
 			platformName: platformName,
 			variant: settings.platformTripleVariant.value,
 			outputURL: outputURL
-		).mapError(CarthageError.taskError)
-	}
-	.attemptMap { replacementURL in
-		if let temporaryDirectory = temporaryDirectory, replacementURL != xcframeworkURL {
+		)
+		.mapError(CarthageError.taskError)
+		.attempt { replacementURL in
+			guard let temporaryDirectory = temporaryDirectory, replacementURL != xcframeworkURL else {
+				return .success(())
+			}
 			return Result(at: xcframeworkURL) { url in
 				try fileManager.replaceItemAt(url, withItemAt: replacementURL)
 			}.flatMap { _ in
 				Result(at: temporaryDirectory) { try fileManager.removeItem(at: $0) }
-			}.map { _ in
-				xcframeworkURL
 			}
-		} else {
-			return .success(xcframeworkURL)
 		}
+		.then(SignalProducer(value: xcframeworkURL))
 	}
 }
 
@@ -660,7 +666,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	_ scheme: Scheme,
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
-	forDependency dependency: Dependency?,
 	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
@@ -674,17 +679,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		derivedDataPath: options.derivedDataPath,
 		toolchain: options.toolchain
 	)
-
-	let xcframeworkURL: URL
-	if let dependency = dependency {
-		xcframeworkURL = rootDirectoryURL.appendingPathComponent(dependency.xcframeworkPath)
-	} else {
-		// If the build doesn't correspond with a known dependency (i.e. if we're building the current dependency _and_
-		// a name for the local repo cannot be determined), fall back to using the project name for the xcframework.
-		xcframeworkURL = rootDirectoryURL.appendingPathExtension(Constants.binariesFolderPath).appendingPathComponent(
-			project.fileURL.deletingPathExtension().appendingPathExtension("xcframework").lastPathComponent
-		)
-	}
+	let buildURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
 		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
@@ -724,7 +719,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
 					.flatMapTaskEvents(.merge) { settings in
 						if options.createXCFramework {
-							return mergeIntoXCFramework(xcframeworkURL, settings: settings)
+							return mergeIntoXCFramework(in: buildURL, settings: settings)
 						} else {
 							return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
 						}
@@ -779,8 +774,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
 						if options.createXCFramework {
-							return mergeIntoXCFramework(xcframeworkURL, settings: deviceSettings)
-								.concat(mergeIntoXCFramework(xcframeworkURL, settings: simulatorSettings))
+							return mergeIntoXCFramework(in: buildURL, settings: deviceSettings)
+								.concat(mergeIntoXCFramework(in: buildURL, settings: simulatorSettings))
 						} else {
 							return mergeBuildProducts(
 								deviceBuildSettings: deviceSettings,
@@ -1094,7 +1089,6 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						scheme,
 						withOptions: options,
 						inProject: project,
-						forDependency: dependency.map { $0.dependency },
 						rootDirectoryURL: rootDirectoryURL,
 						workingDirectoryURL: directoryURL,
 						sdkFilter: wrappedSDKFilter
