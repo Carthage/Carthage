@@ -586,7 +586,10 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings)
 		directoryURL.appendingPathComponent(productName).appendingPathExtension("xcframework")
 	}
 	let framework = SignalProducer(result: settings.wrapperURL.map({ $0.resolvingSymlinksInPath() }))
-	let buildDSYMs = SignalProducer(result: settings.wrapperURL).flatMap(.concat, createDebugInformation)
+
+	let buildDSYMs = SignalProducer(result: settings.wrapperURL)
+		.filter { _ in settings.machOType.value != .staticlib }
+		.flatMap(.concat, createDebugInformation)
 		.ignoreTaskData()
 		.map({ $0 })
 	let buildSymbolMaps = SignalProducer(result: settings.wrapperURL)
@@ -774,7 +777,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
 			guard !options.createXCFramework else {
-				// XCFrameworks already have debug information embedded in them.
+				// XCFrameworks have debug information embedded in them after being merged.
 				return SignalProducer(value: builtProductURL)
 			}
 			return UUIDsForFramework(builtProductURL)
