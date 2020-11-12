@@ -188,23 +188,6 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, env
 	return xcodebuildTask([task], buildArguments)
 }
 
-func shouldBuildXCFramework(deviceBuildSettings: BuildSettings, simulatorBuildSettings: BuildSettings) -> Result<Bool, CarthageError> {
-	let isRequired = deviceBuildSettings.archs.fanout(simulatorBuildSettings.archs).map { deviceArchs, simulatorArchs in
-		!deviceArchs.isDisjoint(with: simulatorArchs)
-	}
-	return isRequired.flatMap { isRequired in
-		guard isRequired else { return .success(false) }
-		guard let xcodeVersion = XcodeVersion.make() else {
-			return .failure(.xcframeworkRequired(xcodebuildVersion: "unknown"))
-		}
-		let versionComponents = xcodeVersion.version.split(separator: ".")
-		guard let majorVersion = Int(versionComponents[0]), majorVersion >= 12 else {
-			return .failure(.xcframeworkRequired(xcodebuildVersion: xcodeVersion.version))
-		}
-		return .success(true)
-	}
-}
-
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length

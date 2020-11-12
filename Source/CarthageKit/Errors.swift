@@ -105,8 +105,10 @@ public enum CarthageError: Error {
 	/// be copied to the same destination path
 	case duplicatesInArchive(duplicates: DuplicatesInArchive)
 
-	/// Building frameworks with common device and simulator architectures
-	/// requires Xcode 12 or greater. Current version: `<xcodebuildVersion>`
+	/// Creating xcframeworks requires Xcode 12 or greater. Current version: `<xcodebuildVersion>`
+	///
+	/// To build individual frameworks for a platform with distinct simulator and device architectures,
+	/// use `--no-create-xcframework`.
 	case xcframeworkRequired(xcodebuildVersion: String)
 }
 
@@ -390,7 +392,10 @@ extension CarthageError: CustomStringConvertible {
 			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
 
 		case let .xcframeworkRequired(xcodebuildVersion):
-			return "Building frameworks with common device and simulator architectures requires Xcode 12 or greater. Current version: \(xcodebuildVersion)"
+			return [
+				"Creating xcframeworks requires Xcode 12 or greater. Current version: \(xcodebuildVersion)",
+				"To build individual frameworks for a platform with distinct simulator and device architectures, use --no-create-xcframework."
+			].joined(separator: "\n")
 		}
 	}
 }
