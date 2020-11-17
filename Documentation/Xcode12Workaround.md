@@ -32,7 +32,7 @@ As a workaround you can invoke carthage using this script, it will remove the ar
 
 ### Workaround script
 
-This script has a known limitation - it will remove arm64 simulator architecture from compiled framework, so frameworks compiled using it cannot be used on Macs running Apple Sillicon.
+This script has a known limitation - it will remove arm64 simulator architecture from compiled framework, so frameworks compiled using it cannot be used on Macs running Apple Silicon.
 
 ```bash
 # carthage.sh
