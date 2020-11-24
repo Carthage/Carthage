@@ -62,7 +62,11 @@ internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> Si
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
 	// Fall back to dSYM version parsing if header is not present
 	guard let swiftHeaderURL = frameworkURL.swiftHeaderURL() else {
-		return dSYMSwiftVersion(frameworkURL.appendingPathExtension("dSYM"))
+		let dSYMInXCFramework = frameworkURL.deletingLastPathComponent().appendingPathComponent("dSYMs")
+			.appendingPathComponent("\(frameworkURL.lastPathComponent).dSYM")
+		let dSYMInBuildFolder = frameworkURL.appendingPathExtension("dSYM")
+		return dSYMSwiftVersion(dSYMInXCFramework)
+			.flatMapError { _ in dSYMSwiftVersion(dSYMInBuildFolder) }
 	}
 
 	guard
