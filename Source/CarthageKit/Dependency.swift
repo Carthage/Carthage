@@ -58,35 +58,6 @@ public enum Dependency: Hashable {
 
 extension Dependency {
 	fileprivate init(gitURL: GitURL) {
-		let githubHostIdentifier = "github.com"
-		let urlString = gitURL.urlString
-
-		if urlString.contains(githubHostIdentifier) {
-			let gitbubHostScanner = Scanner(string: urlString)
-
-			gitbubHostScanner.scanUpTo(githubHostIdentifier, into: nil)
-			gitbubHostScanner.scanString(githubHostIdentifier, into: nil)
-
-			// find an SCP or URL path separator
-			let separatorFound = (gitbubHostScanner.scanString("/", into: nil) || gitbubHostScanner.scanString(":", into: nil)) && !gitbubHostScanner.isAtEnd
-
-			let startOfOwnerAndNameSubstring = gitbubHostScanner.scanLocation
-
-			if separatorFound && startOfOwnerAndNameSubstring <= urlString.utf16.count {
-				let ownerAndNameSubstring = String(urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex])
-
-				switch Repository.fromIdentifier(ownerAndNameSubstring as String) {
-				case .success(let server, let repository):
-					self = Dependency.gitHub(server, repository)
-
-				default:
-					self = Dependency.git(gitURL)
-				}
-
-				return
-			}
-		}
-
 		self = Dependency.git(gitURL)
 	}
 }
