@@ -5,7 +5,7 @@ As Carthage doesn't work out of the box with Xcode 12, this document will guide 
 ## Why Carthage compilation fails
 
 Well, shortly, Carthage builds fat frameworks, which means that the framework contains binaries for all supported architectures. 
-Until Apple Sillicon was introduced it all worked just fine, but now there is a conflict as there are duplicate architectures (arm64 for devices and arm64 for simulator).
+Until Apple Silicon was introduced it all worked just fine, but now there is a conflict as there are duplicate architectures (arm64 for devices and arm64 for simulator).
 This means that Carthage cannot link architecture specific frameworks to a single fat framework.
 
 You can find more info in [respective issue #3019](https://github.com/Carthage/Carthage/issues/3019).
