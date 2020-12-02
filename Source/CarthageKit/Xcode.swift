@@ -821,7 +821,8 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 /// The extracted frameworks are used to support building projects which are not configured to use XCFramework products
 /// from their Carthage/Build directory.
 ///
-/// Sends the temporary directory or `nil` if there are no xcframeworks to extract.
+/// Sends the temporary directory or `nil` if there are no xcframeworks to extract. The directory is _not_ deleted
+/// upon disposal, so that asynchronous build actions can use extracted frameworks after the producer has completed.
 func extractXCFrameworks(in buildDirectory: URL, for settings: BuildSettings) -> SignalProducer<URL?, CarthageError> {
 	guard let platformTripleOS = settings.platformTripleOS.value else {
 		// Can't extract xcframeworks if this project doesn't declare its OS triple
@@ -988,6 +989,19 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					return buildScheme.launch()
 						.flatMapTaskEvents(.concat) { _ in SignalProducer(settings) }
 						.mapError(CarthageError.taskError)
+						.concat(SignalProducer { observer, _ in
+							// Delete extractedXCFrameworksDir after a successful build.
+							guard let extractedXCFrameworksDir = extractedXCFrameworksDir else {
+								observer.sendCompleted()
+								return
+							}
+							do {
+								try FileManager.default.removeItem(at: extractedXCFrameworksDir)
+								observer.sendCompleted()
+							} catch let error as NSError {
+								observer.send(error: .writeFailed(extractedXCFrameworksDir, error))
+							}
+						})
 				}
 		}
 }
