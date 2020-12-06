@@ -16,13 +16,6 @@ extension BuildOptions: OptionsProtocol {
 		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
-		let xcodeVersion = XcodeVersion.make()?.version
-		let xcframeworksSupported = xcodeVersion?.components(separatedBy: ".").first.flatMap(Int.init).map { $0 >= 12 } ?? false
-		let xcframeworkUsage = "build an xcframework bundle instead of one framework per platform"
-		let xcframeworkRequired = CommandantError.commandError(
-			CarthageError.xcframeworkRequired(xcodebuildVersion: xcodeVersion ?? "unknown")
-		)
-
 		return curry(BuildOptions.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
 			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage))
@@ -31,8 +24,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "don't use downloaded binaries when possible")
-			<*> (mode <| Option(key: "create-xcframework", defaultValue: xcframeworksSupported, usage: xcframeworkUsage))
-				.flatMap { if !xcframeworksSupported && $0 { return .failure(xcframeworkRequired) } else { return .success($0) }}
+			<*> (mode <| Option(key: "create-xcframework", defaultValue: false, usage: "build an xcframework bundle instead of one framework per platform (requires Xcode 12+)"))
 	}
 }
 
