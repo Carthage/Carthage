@@ -48,19 +48,21 @@ public struct ArchiveCommand: CommandProtocol {
 		let formatting = options.colorOptions.formatting
 
 		let frameworks: SignalProducer<[String], CarthageError>
+		let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
+
 		if !options.frameworkNames.isEmpty {
 			frameworks = .init(value: options.frameworkNames.map {
-				return ($0 as NSString).appendingPathExtension("framework")!
+				return enumerateSupportedFrameworks(target: $0, inDirectory: directoryURL)
+					.map{ $0.name }.first()?.value ?? $0
 			})
 		} else {
-			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release")
 				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.load(with: buildArguments)
 				}
 				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value, settings.productType.value == .framework {
+					if let wrapperName = settings.wrapperName.value, settings.productType.value?.isArchivable ?? false {
 						return .init(value: wrapperName)
 					} else {
 						return .empty
@@ -104,7 +106,7 @@ public struct ArchiveCommand: CommandProtocol {
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
-						.filter { $0.hasSuffix(".framework") }
+						.filter { ProductExtension.isSupportedExtension(($0 as NSString).pathExtension) }
 
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.invalidArgument(

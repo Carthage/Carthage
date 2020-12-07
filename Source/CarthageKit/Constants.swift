@@ -96,10 +96,6 @@ public struct Constants {
 		/// The relative path to a project's Cartfile.resolved.
 		public static let resolvedCartfilePath = "Cartfile.resolved"
 
-		/// The text that needs to exist in a GitHub Release asset's name, for it to be
-		/// tried as a binary framework.
-		public static let binaryAssetPattern = ".framework"
-
 		/// MIME types allowed for GitHub Release assets, for them to be considered as
 		/// binary frameworks.
 		public static let binaryAssetContentTypes = ["application/zip", "application/x-zip-compressed", "application/octet-stream"]

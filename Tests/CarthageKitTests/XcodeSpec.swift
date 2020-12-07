@@ -290,6 +290,30 @@ class XcodeSpec: QuickSpec {
 				expect(path).to(beExistingDirectory())
 			}
 		}
+		
+		it("should build frameworks with different extensions") {
+			let multipleSubprojects = "SampleOtherFrameworkTypes"
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
+			
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			
+			expect(result.error).to(beNil())
+			
+			let expectedFrameworks = [
+				("TestQuickLookPlugin", "qlgenerator"),
+				("TestScreensaverPlugin", "saver"),
+				]
+			
+			for (name, ext) in expectedFrameworks {
+				let path = buildFolderURL.appendingPathComponent("Mac").appendingPathComponent(name).appendingPathExtension(ext).path
+				expect(path).to(beExistingDirectory())
+			}
+		}
 
 		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"

@@ -606,7 +606,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		frameworkNameAndExtension: String
 	) -> Result<URL, CarthageError> {
 		guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
-			lastComponent == "framework" else {
+			ProductExtension.isSupportedExtension(lastComponent) else {
 				return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
 		}
 
@@ -804,10 +804,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
 					.filter { asset in
-						if asset.name.range(of: Constants.Project.binaryAssetPattern) == nil {
-							return false
+						var onionExt = (asset.name as NSString)
+						while onionExt.pathExtension != "" {
+							let ext = onionExt.pathExtension
+							if ProductExtension.isSupportedExtension(ext) {
+								return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+							}
+							onionExt = (onionExt.deletingPathExtension as NSString)
 						}
-						return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+						return false
 					}
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
@@ -1446,12 +1451,12 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 
 /// Sends the URL to each framework bundle found in the given directory.
 internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
-	return filesInDirectory(directoryURL, kUTTypeFramework as String)
+	return filesInDirectory(directoryURL, kUTTypeBundle as String)
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
-				return (pathComponent as NSString).pathExtension == "framework"
+				return ProductExtension.isSupportedExtension((pathComponent as NSString).pathExtension)
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in
