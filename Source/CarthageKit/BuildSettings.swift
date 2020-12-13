@@ -173,6 +173,12 @@ public struct BuildSettings {
 		return productType.fanout(machOType).map(FrameworkType.init)
 	}
 
+	internal var frameworkSearchPaths: Result<[URL], CarthageError> {
+		return self["FRAMEWORK_SEARCH_PATHS"].map { paths in
+			paths.split(separator: " ").map { URL(fileURLWithPath: String($0), isDirectory: true) }
+		}
+	}
+
 	/// Attempts to determine the URL to the built products directory.
 	public var builtProductsDirectoryURL: Result<URL, CarthageError> {
 		return self["BUILT_PRODUCTS_DIR"].map { productsDir in
