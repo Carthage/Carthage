@@ -50,7 +50,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	github "Alamofire/Alamofire" ~> 4.7.2
 	```
 
-1. Run `carthage update`
+1. Run `carthage update --create-xcframework`
 1. A `Cartfile.resolved` file and a `Carthage` directory will appear in the same directory where your `.xcodeproj` or `.xcworkspace` is
 1. Drag the built `.xcframework` bundles from `Carthage/Build` into the "Frameworks and Libraries" section of your application’s Xcode project.
 1. If you are using Carthage for an application, select "Embed & Sign", otherwise "Do Not Embed".
@@ -78,7 +78,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 #### Building platform-independent xcframeworks (Xcode 12 and above)
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled xcframework.
+1. Run `carthage update --create-xcframework`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled xcframework.
 1. On your application targets’ _General_ settings tab, in the _Embedded Binaries_ section, drag and drop each xcframework you want to use from the [Carthage/Build][] folder on disk.
 
 #### Building platform-specific framework bundles (default for Xcode 11 and below)
@@ -91,7 +91,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 	<summary>macOS-specific instructions</summary>
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update --platform macOS --no-create-xcframework`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
+1. Run `carthage update --platform macOS`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
 1. On your application targets’ _General_ settings tab, in the _Embedded Binaries_ section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
 Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
@@ -108,7 +108,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 	<summary>Platform-specific instructions</summary>
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update --no-create-xcframework`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
+1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
 1. Open your application targets’ _General_ settings tab. For Xcode 11.0 and higher, in the "Frameworks, Libraries, and Embedded Content" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk. Then, in the "Embed"  section, select "Do Not Embed" from the pulldown menu for each item added. For Xcode 10.x and lower, in the "Linked Frameworks and Libraries" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
