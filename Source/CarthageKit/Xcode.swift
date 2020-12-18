@@ -708,7 +708,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
 					.flatMapTaskEvents(.merge) { settings in
-						if options.createXCFramework {
+						if options.useXCFrameworks {
 							return mergeIntoXCFramework(in: buildURL, settings: settings)
 						} else {
 							return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
@@ -763,7 +763,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						if options.createXCFramework {
+						if options.useXCFrameworks {
 							return mergeIntoXCFramework(in: buildURL, settings: deviceSettings)
 								.concat(mergeIntoXCFramework(in: buildURL, settings: simulatorSettings))
 						} else {
@@ -780,7 +780,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			}
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
-			guard !options.createXCFramework else {
+			guard !options.useXCFrameworks else {
 				// XCFrameworks have debug information embedded in them after being merged.
 				return SignalProducer(value: builtProductURL)
 			}

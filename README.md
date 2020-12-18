@@ -50,7 +50,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	github "Alamofire/Alamofire" ~> 4.7.2
 	```
 
-1. Run `carthage update --create-xcframework`
+1. Run `carthage update --use-xcframeworks`
 1. A `Cartfile.resolved` file and a `Carthage` directory will appear in the same directory where your `.xcodeproj` or `.xcworkspace` is
 1. Drag the built `.xcframework` bundles from `Carthage/Build` into the "Frameworks and Libraries" section of your application’s Xcode project.
 1. If you are using Carthage for an application, select "Embed & Sign", otherwise "Do Not Embed".
@@ -78,7 +78,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 #### Building platform-independent xcframeworks (Xcode 12 and above)
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update --create-xcframework`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled xcframework.
+1. Run `carthage update --use-xcframeworks`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled xcframework.
 1. On your application targets’ _General_ settings tab, in the _Embedded Binaries_ section, drag and drop each xcframework you want to use from the [Carthage/Build][] folder on disk.
 
 #### Building platform-specific framework bundles (default for Xcode 11 and below)

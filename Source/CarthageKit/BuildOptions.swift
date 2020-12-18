@@ -17,7 +17,7 @@ public struct BuildOptions {
 	/// Whether to use downloaded binaries if possible.
 	public var useBinaries: Bool
 	/// Whether to create an XCFramework instead of lipoing built products.
-	public var createXCFramework: Bool
+	public var useXCFrameworks: Bool
 
 	public init(
 		configuration: String,
@@ -26,7 +26,7 @@ public struct BuildOptions {
 		derivedDataPath: String? = nil,
 		cacheBuilds: Bool = true,
 		useBinaries: Bool = true,
-		createXCFramework: Bool = false
+		useXCFrameworks: Bool = false
 	) {
 		self.configuration = configuration
 		self.platforms = platforms
@@ -34,6 +34,6 @@ public struct BuildOptions {
 		self.derivedDataPath = derivedDataPath
 		self.cacheBuilds = cacheBuilds
 		self.useBinaries = useBinaries
-		self.createXCFramework = createXCFramework
+		self.useXCFrameworks = useXCFrameworks
 	}
 }
