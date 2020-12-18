@@ -749,7 +749,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 							return SignalProducer(value: .standardError(data))
 
 						case let .success(deviceSettingsByTarget):
-							return settingsByTarget(build(sdk: simulatorSDK, with: buildArgs, in: workingDirectoryURL))
+							return settingsByTarget(
+								build(sdk: simulatorSDK,
+									  with: buildArgs,
+									  in: workingDirectoryURL)
+								)
 								.flatMapTaskEvents(.concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 									assert(
 										deviceSettingsByTarget.count == simulatorSettingsByTarget.count,
@@ -886,7 +890,12 @@ func extractXCFrameworks(in buildDirectory: URL, for settings: BuildSettings) ->
 
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
 // swiftlint:disable:next function_body_length
-private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
+private func build(
+	sdk: SDK,
+	with buildArgs: BuildArguments,
+	in workingDirectoryURL: URL
+) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
+
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
 	argsForLoading.onlyActiveArchitecture = false
@@ -961,6 +970,12 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				.flatMap(.concat) { settings, extractedXCFrameworksDir -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 					let actions: [String] = {
 						var result: [String] = [xcodebuildAction.rawValue]
+
+						if settings.contains(where: { UInt64($0["XCODE_VERSION_ACTUAL"].recover("")) ?? 0 >= 1230 }) {
+							// Fixes Xcode 12.3 refusing to link against fat binaries
+							// "Building for iOS Simulator, but the linked and embedded framework 'REDACTED.framework' was built for iOS + iOS Simulator."
+							result += [ "VALIDATE_WORKSPACE=NO" ]
+						}
 
 						if xcodebuildAction == .archive {
 							result += [
