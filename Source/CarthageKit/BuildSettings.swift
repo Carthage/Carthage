@@ -154,6 +154,10 @@ public struct BuildSettings {
 		}
 	}
 
+	public var archs: Result<Set<String>, CarthageError> {
+		return self["ARCHS"].map { Set($0.components(separatedBy: " ")) }
+	}
+
 	/// Attempts to determine the ProductType specified in these build settings.
 	public var productType: Result<ProductType, CarthageError> {
 		return self["PRODUCT_TYPE"].flatMap(ProductType.from(string:))
@@ -167,6 +171,12 @@ public struct BuildSettings {
 	/// Attempts to determine the FrameworkType identified by these build settings.
 	internal var frameworkType: Result<FrameworkType?, CarthageError> {
 		return productType.fanout(machOType).map(FrameworkType.init)
+	}
+
+	internal var frameworkSearchPaths: Result<[URL], CarthageError> {
+		return self["FRAMEWORK_SEARCH_PATHS"].map { paths in
+			paths.split(separator: " ").map { URL(fileURLWithPath: String($0), isDirectory: true) }
+		}
 	}
 
 	/// Attempts to determine the URL to the built products directory.
@@ -244,6 +254,11 @@ public struct BuildSettings {
 		return self["WRAPPER_NAME"]
 	}
 
+	/// Attempts to determine the name of the built product.
+	public var productName: Result<String, CarthageError> {
+		return self["PRODUCT_NAME"]
+	}
+
 	/// Attempts to determine the URL to the built product's wrapper, corresponding
 	/// to its xcodebuild action.
 	public var wrapperURL: Result<URL, CarthageError> {
@@ -293,6 +308,26 @@ public struct BuildSettings {
 	/// Attempts to determine target build directory
 	public var targetBuildDirectory: Result<String, CarthageError> {
 		return self["TARGET_BUILD_DIR"]
+	}
+
+	/// The "OPERATING_SYSTEM" component of the target triple. Used in XCFrameworks to denote the supported platform.
+	public var platformTripleOS: Result<String, CarthageError> {
+		return self["LLVM_TARGET_TRIPLE_OS_VERSION"].map { osVersion in
+			// osVersion is a string like "ios8.0". Remove any trailing version number.
+			// This should match the OS component of an "unversionedTriple" printed by `swift -print-target-info`.
+			osVersion.replacingOccurrences(of: "([0-9]\\.?)*$", with: "", options: .regularExpression)
+		}.flatMapError { _ in
+			// LLVM_TARGET_TRIPLE_OS_VERSION may be unavailable if `USE_LLVM_TARGET_TRIPLES = NO`.
+			// SWIFT_PLATFORM_TARGET_PREFIX anecdotally appears to contain the unversioned OS component, even in
+			// non-swift projects.
+			self["SWIFT_PLATFORM_TARGET_PREFIX"]
+		}
+	}
+
+	// The "ENVIRONMENT" component of the target triple, which is "simulator" when building for a simulator target
+	// and missing otherwise.
+	public var platformTripleVariant: Result<String, CarthageError> {
+		return self["LLVM_TARGET_TRIPLE_SUFFIX"].map { $0.stripping(prefix: "-") }
 	}
 
 	/// Add subdirectory path if it's not possible to paste product to destination path
