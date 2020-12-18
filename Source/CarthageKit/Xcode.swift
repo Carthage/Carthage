@@ -534,6 +534,9 @@ private func mergeBuildProducts(
 	simulatorBuildSettings: BuildSettings,
 	into destinationFolderURL: URL
 ) -> SignalProducer<URL, CarthageError> {
+	let commonArchitectures = deviceBuildSettings.archs.fanout(simulatorBuildSettings.archs).map { deviceArchs, simulatorArchs in
+		deviceArchs.intersection(simulatorArchs)
+	}
 	return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
 		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
 			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
@@ -580,6 +583,15 @@ private func mergeBuildProducts(
 				.then(mergeProductModules)
 				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
+		}
+		.mapError { error -> CarthageError in
+			if case .taskError(let taskError) = error,
+				 let commonArchitectures = commonArchitectures.value,
+				 let productName = deviceBuildSettings.productName.value {
+				return .xcframeworkRequired(.init(productName: productName, commonArchitectures: commonArchitectures, underlyingError: taskError))
+			} else {
+				return error
+			}
 		}
 }
 
