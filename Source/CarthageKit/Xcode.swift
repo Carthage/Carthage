@@ -648,7 +648,8 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings)
 				return .success(())
 			}
 			return Result(at: xcframeworkURL) { url in
-				try fileManager.replaceItemAt(url, withItemAt: replacementURL)
+				try fileManager.removeItem(at: url)
+				try fileManager.copyItem(at: replacementURL, to: url)
 			}.flatMap { _ in
 				Result(at: temporaryDirectory) { try fileManager.removeItem(at: $0) }
 			}
