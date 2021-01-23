@@ -616,23 +616,16 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings)
 	let buildDebugSymbols = buildDSYMs.concat(buildSymbolMaps).collect()
 	let platformName = SignalProducer(result: settings.platformTripleOS)
 	let fileManager = FileManager.default
+	let createTemporaryDirectory = fileManager.reactive.createTemporaryDirectoryWithTemplate("carthage-xcframework-XXXXXX")
 
 	return SignalProducer.combineLatest(
 		framework,
 		buildDebugSymbols,
 		platformName,
-		xcframework
-	).flatMap(.concat) { frameworkURL, debugSymbols, platformName, xcframeworkURL -> SignalProducer<URL, CarthageError> in
-		// If xcframeworkURL doesn't exist yet (i.e. we're creating a new xcframework rather than merging into an existing
-		// one), creating temporaryDirectory will fail, we'll set outputURL to xcframeworkURL, and we'll skip the call to
-		// replaceItemAt(_:withItemAt:) below.
-		let temporaryDirectory = try? fileManager.url(
-			for: .itemReplacementDirectory,
-			in: .userDomainMask,
-			appropriateFor: xcframeworkURL,
-			create: true
-		)
-		let outputURL = temporaryDirectory.map { $0.appendingPathComponent(xcframeworkURL.lastPathComponent) } ?? xcframeworkURL
+		xcframework,
+		createTemporaryDirectory
+	).flatMap(.concat) { frameworkURL, debugSymbols, platformName, xcframeworkURL, temporaryDirectory -> SignalProducer<URL, CarthageError> in
+		let outputURL = temporaryDirectory.appendingPathComponent(xcframeworkURL.lastPathComponent)
 
 		return mergeIntoXCFramework(
 			xcframeworkURL,
@@ -644,11 +637,11 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings)
 		)
 		.mapError(CarthageError.taskError)
 		.attempt { replacementURL in
-			guard let temporaryDirectory = temporaryDirectory, replacementURL != xcframeworkURL else {
-				return .success(())
-			}
 			return Result(at: xcframeworkURL) { url in
-				try fileManager.removeItem(at: url)
+				if fileManager.fileExists(atPath: url.path) {
+					try fileManager.removeItem(at: url)
+				}
+				try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 				try fileManager.copyItem(at: replacementURL, to: url)
 			}.flatMap { _ in
 				Result(at: temporaryDirectory) { try fileManager.removeItem(at: $0) }
