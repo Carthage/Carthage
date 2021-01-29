@@ -92,12 +92,12 @@ We encourage using XCFrameworks as of version 0.37.0 (January 2021), and require
 1. Delete your `Carthage/Build` folder to remove any existing framework bundles.
 1. Build new XCFrameworks by running `carthage build --use-xcframeworks`. Any other arguments you build with can be provided like normal.
 1. Remove references to the old frameworks in each of your targets:
-  - Delete references to Carthage frameworks from the target's _Frameworks, Libraries, and Embedded Content_ section and/or its _Link Binary with Libraries_ build phase.
-  - Delete references to Carthage frameworks from any _Copy Files_ build phases.
-  - Delete the target's `carthage copy-frameworks` build phase, if present.
+    - Delete references to Carthage frameworks from the target's _Frameworks, Libraries, and Embedded Content_ section and/or its _Link Binary with Libraries_ build phase.
+    - Delete references to Carthage frameworks from any _Copy Files_ build phases.
+    - Delete the target's `carthage copy-frameworks` build phase, if present.
 1. Add references to XCFrameworks in each of your targets:
-  - For an application target: In the _General_ settings tab, in the _Frameworks, Libraries, and Embedded Content_ section, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
-  - For a framework target: In the _Build Phases_ tab, in a _Link Binary with Libraries_ phase, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
+    - For an application target: In the _General_ settings tab, in the _Frameworks, Libraries, and Embedded Content_ section, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
+    - For a framework target: In the _Build Phases_ tab, in a _Link Binary with Libraries_ phase, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
 
 </details>
 
