@@ -1385,9 +1385,14 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 		.flatMap(.race) { (relativeBinaryURL: URL, tempDir: URL) -> SignalProducer<(Data, URL), CarthageError> in
 			let outputURL = URL(string: relativeBinaryURL.relativePath, relativeTo: tempDir)!
 
+			let command: [String] = {
+				if architectures.isEmpty { return [ "-create" ] } // creating just the contents of the original
+				return architectures.flatMap { [ "-remove", $0 ] } // creating a binary removing the specified
+			}()
+
 			let arguments = [
 				[ relativeBinaryURL.absoluteURL.path ],
-				architectures.flatMap { [ "-remove", $0 ] },
+				command,
 				[ "-output", outputURL.path ],
 			].reduce(into: ["lipo"]) { $0.append(contentsOf: $1) }
 
