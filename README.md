@@ -10,7 +10,8 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 - [Installing Carthage](#installing-carthage)
 - [Adding frameworks to an application](#adding-frameworks-to-an-application)
 	- [Getting started](#getting-started)
-		- [Building platform-independent xcframeworks](#building-platform-independent-xcframeworks-xcode-12-and-above)
+		- [Building platform-independent XCFrameworks](#building-platform-independent-xcframeworks-xcode-12-and-above)
+			- [Migrating a project from framework bundles to XCFrameworks](#migrating-a-project-from-framework-bundles-to-xcframeworks)
 		- [Building platform-specific framework bundles](#building-platform-specific-framework-bundles-default-for-xcode-11-and-below)
 			- [If you're building for macOS](#if-youre-building-for-macos)
 			- [If you're building for iOS, tvOS, or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
@@ -75,15 +76,34 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 ### Getting started
 
-#### Building platform-independent xcframeworks (Xcode 12 and above)
+#### Building platform-independent XCFrameworks (Xcode 12 and above)
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update --use-xcframeworks`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled xcframework.
-1. On your application targets’ _General_ settings tab, in the _Embedded Binaries_ section, drag and drop each xcframework you want to use from the [Carthage/Build][] folder on disk.
+1. Run `carthage update --use-xcframeworks`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled XCFramework.
+1. On your application targets’ _General_ settings tab, in the _Frameworks, Libraries, and Embedded Content_ section, drag and drop each XCFramework you want to use from the [Carthage/Build][] folder on disk.
+
+##### Migrating a project from framework bundles to XCFrameworks
+
+We encourage using XCFrameworks as of version 0.37.0 (January 2021), and require XCFrameworks when building on an Apple Silicon Mac. Switching from discrete framework bundles to XCFrameworks requires a few changes to your project:
+
+<details>
+  <summary>Migration steps</summary>
+
+1. Delete your `Carthage/Build` folder to remove any existing framework bundles.
+1. Build new XCFrameworks by running `carthage build --use-xcframeworks`. Any other arguments you build with can be provided like normal.
+1. Remove references to the old frameworks in each of your targets:
+    - Delete references to Carthage frameworks from the target's _Frameworks, Libraries, and Embedded Content_ section and/or its _Link Binary with Libraries_ build phase.
+    - Delete references to Carthage frameworks from any _Copy Files_ build phases.
+    - Delete the target's `carthage copy-frameworks` build phase, if present.
+1. Add references to XCFrameworks in each of your targets:
+    - For an application target: In the _General_ settings tab, in the _Frameworks, Libraries, and Embedded Content_ section, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
+    - For a framework target: In the _Build Phases_ tab, in a _Link Binary with Libraries_ phase, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
+
+</details>
 
 #### Building platform-specific framework bundles (default for Xcode 11 and below)
 
-**Xcode 12+ incompatibility**: Multi-architecture platforms are not supported when building framework bundles in Xcode 12 and above. Prefer [building with xcframeworks](#building-platform-independent-xcframeworks-xcode-12-and-above). If you need to build discrete framework bundles, [use a workaround xcconfig file](Documentation/Xcode12Workaround.md).
+**Xcode 12+ incompatibility**: Multi-architecture platforms are not supported when building framework bundles in Xcode 12 and above. Prefer [building with XCFrameworks](#building-platform-independent-xcframeworks-xcode-12-and-above). If you need to build discrete framework bundles, [use a workaround xcconfig file](Documentation/Xcode12Workaround.md).
 
 ##### If you're building for macOS
 
