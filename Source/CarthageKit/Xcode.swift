@@ -1360,6 +1360,9 @@ extension Signal where Value: TaskEventType {
 }
 
 public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectures: Set<String>) -> SignalProducer<(Data, URL), CarthageError> {
+    guard isNotXCFramework(frameworkURL) else {
+        return SignalProducer<(Data, URL), CarthageError>.empty
+    }
 	return SignalProducer(value: frameworkURL)
 		.attemptMap(binaryURL)
 		.attemptMap {
@@ -1416,6 +1419,9 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 
 /// Strips the given architectures from a framework.
 private func stripArchitectures(_ packageURL: URL, _ architectures: Set<String>) -> SignalProducer<(), CarthageError> {
+    guard isNotXCFramework(packageURL) else {
+        return SignalProducer<(), CarthageError>.empty
+    }
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<(), CarthageError> in
 			let arguments = [
@@ -1434,6 +1440,9 @@ private func stripArchitectures(_ packageURL: URL, _ architectures: Set<String>)
 
 // Returns a signal of all architectures present in a given package.
 public func architecturesInPackage(_ packageURL: URL, xcrunQuery: [String] = ["lipo", "-info"]) -> SignalProducer<[String], CarthageError> {
+    guard isNotXCFramework(packageURL) else {
+        return SignalProducer(value: [])
+    }
 	let binaryURLResult = binaryURL(packageURL)
 	guard let binaryURL = binaryURLResult.value else { return SignalProducer(error: binaryURLResult.error!) }
 
@@ -1494,6 +1503,9 @@ public func architecturesInPackage(_ packageURL: URL, xcrunQuery: [String] = ["l
 
 /// Strips debug symbols from the given framework
 public func stripDebugSymbols(_ frameworkURL: URL) -> SignalProducer<(), CarthageError> {
+    guard isNotXCFramework(frameworkURL) else {
+        return SignalProducer<(), CarthageError>.empty
+    }
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
 			let stripTask = Task("/usr/bin/xcrun", arguments: [ "strip", "-S", "-o", binaryURL.path, binaryURL.path])
@@ -1535,6 +1547,9 @@ private func stripDirectory(named directory: String, of frameworkURL: URL) -> Si
 
 /// Sends a set of UUIDs for each architecture present in the given framework.
 public func UUIDsForFramework(_ frameworkURL: URL) -> SignalProducer<Set<UUID>, CarthageError> {
+    guard isNotXCFramework(frameworkURL) else {
+        return SignalProducer(value: Set<UUID>())
+    }
 	return SignalProducer { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge, UUIDsFromDwarfdump)
 }
@@ -1651,4 +1666,8 @@ private func codesign(_ frameworkURL: URL, _ expandedIdentity: String) -> Signal
 	return codesignTask.launch()
 		.mapError(CarthageError.taskError)
 		.then(SignalProducer<(), CarthageError>.empty)
+}
+
+private func isNotXCFramework(_ frameworkUrl: URL) -> Bool {
+    return !frameworkUrl.lastPathComponent.contains("xcframework")
 }
