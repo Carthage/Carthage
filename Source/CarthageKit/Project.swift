@@ -603,10 +603,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// will be found. Depends on the location of the current project.
 	private func frameworkURLInCarthageBuildFolder(
 		forSDK sdk: SDK,
-		frameworkNameAndExtension: String
+		frameworkNameAndExtension: String,
+        isXCFramework: Bool
 	) -> Result<URL, CarthageError> {
 		guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
-			lastComponent == "framework" else {
+              lastComponent == (isXCFramework ? "xcframework" : "framework") else {
 				return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
 		}
 
@@ -674,9 +675,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.merge) { frameworksUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return SignalProducer<URL, CarthageError>(frameworksUrls)
 							.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
-								return platformForFramework(url)
-									.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
-																				 frameworkNameAndExtension: url.lastPathComponent) }
+                                if url.lastPathComponent.contains(".xcframework") {
+                                    return SignalProducer<URL, CarthageError>(value: url)
+                                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "XCFramework", simulatorHeuristic: ""),
+                                                                                   frameworkNameAndExtension: $0.lastPathComponent,
+                                                                                   isXCFramework: true) }
+                                } else {
+                                    return platformForFramework(url)
+                                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
+                                                                                             frameworkNameAndExtension: url.lastPathComponent,
+                                                                                             isXCFramework: false) }
+                                }
 							}
 							.collect()
 							.flatMap(.merge) { destinationUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
@@ -1447,11 +1456,13 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 /// Sends the URL to each framework bundle found in the given directory.
 internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
+        .concat(filesInDirectory(directoryURL, "com.apple.xcframework"))
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
-				return (pathComponent as NSString).pathExtension == "framework"
+                let pathExtension = (pathComponent as NSString).pathExtension
+                return pathExtension == "xcframework" || pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in
@@ -1461,7 +1472,7 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 			let packageType: PackageType? = bundle?.packageType
 
 			switch packageType {
-			case .framework?, .bundle?:
+            case .xcframework?, .framework?, .bundle?:
 				return true
 			default:
 				// In case no Info.plist exists check the Mach-O fileType

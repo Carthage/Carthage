@@ -323,6 +323,9 @@ public enum FrameworkType: String, Codable {
 internal enum PackageType: String {
 	/// A .framework package.
 	case framework = "FMWK"
+    
+    /// A .xcframework package
+    case xcframework = "XFWK"
 
 	/// A .bundle package. Some frameworks might have this package type code
 	/// (e.g. https://github.com/ResearchKit/ResearchKit/blob/1.3.0/ResearchKit/Info.plist#L15-L16).
