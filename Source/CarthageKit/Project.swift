@@ -677,7 +677,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
                                 if url.lastPathComponent.contains(".xcframework") {
                                     return SignalProducer<URL, CarthageError>(value: url)
-                                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "XCFramework", simulatorHeuristic: ""),
+                                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "", simulatorHeuristic: ""),
                                                                                    frameworkNameAndExtension: $0.lastPathComponent,
                                                                                    isXCFramework: true) }
                                 } else {
