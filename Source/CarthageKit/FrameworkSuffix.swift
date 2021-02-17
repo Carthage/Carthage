@@ -1,10 +1,3 @@
-//
-//  FrameworkSuffix.swift
-//  CarthageKit
-//
-//  Created by Ian Stewart on 16/02/21.
-//
-
 import Result
 
 /// Framework Suffix
