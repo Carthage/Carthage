@@ -599,18 +599,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate, buildOptions: buildOptions) : .empty)
 	}
 
-	/// Constructs the file:// URL at which a given .framework
+	/// Constructs the file:// URL at which a given .framework or .xcframework
 	/// will be found. Depends on the location of the current project.
 	private func frameworkURLInCarthageBuildFolder(
 		forSDK sdk: SDK,
-		frameworkNameAndExtension: String,
-        isXCFramework: Bool
+		frameworkNameAndExtension: String
 	) -> Result<URL, CarthageError> {
-		guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
-              lastComponent == (isXCFramework ? "xcframework" : "framework") else {
-				return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
-		}
-
 		guard let destinationURLInWorkingDir = sdk
 			.relativeURL?
 			.appendingPathComponent(frameworkNameAndExtension, isDirectory: true) else {
@@ -675,17 +669,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.merge) { frameworksUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return SignalProducer<URL, CarthageError>(frameworksUrls)
 							.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
-                                if url.lastPathComponent.contains(".xcframework") {
-                                    return SignalProducer<URL, CarthageError>(value: url)
-                                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "", simulatorHeuristic: ""),
-                                                                                   frameworkNameAndExtension: $0.lastPathComponent,
-                                                                                   isXCFramework: true) }
-                                } else {
-                                    return platformForFramework(url)
-                                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
-                                                                                             frameworkNameAndExtension: url.lastPathComponent,
-                                                                                             isXCFramework: false) }
-                                }
+                                return self.getBinaryFrameworkURL(url: url)
 							}
 							.collect()
 							.flatMap(.merge) { destinationUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
@@ -730,6 +714,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
 	}
+    
+    /// Ensures binary framework has a valid extension and returns url in build folder
+    private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
+        return SignalProducer(result: FrameworkSuffix.from(string: url.pathExtension))
+            .flatMap(.merge) { frameworkSuffix -> SignalProducer<URL, CarthageError> in
+                switch frameworkSuffix {
+                case .xcframework:
+                    return SignalProducer<URL, CarthageError>(value: url)
+                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "", simulatorHeuristic: ""),
+                                                                             frameworkNameAndExtension: $0.lastPathComponent) }
+                case .framework:
+                    return platformForFramework(url)
+                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
+                                                                             frameworkNameAndExtension: url.lastPathComponent) }
+                }
+            }
+    }
 
 	/// Removes the file located at the given URL
 	///
@@ -1462,7 +1463,7 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
                 let pathExtension = (pathComponent as NSString).pathExtension
-                return pathExtension == "xcframework" || pathExtension == "framework"
+                return FrameworkSuffix.from(string: pathExtension).error == nil
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in

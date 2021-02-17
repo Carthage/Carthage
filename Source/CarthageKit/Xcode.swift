@@ -1669,5 +1669,5 @@ private func codesign(_ frameworkURL: URL, _ expandedIdentity: String) -> Signal
 }
 
 private func isNotXCFramework(_ frameworkUrl: URL) -> Bool {
-    return !frameworkUrl.lastPathComponent.contains("xcframework")
+    return FrameworkSuffix.from(string: frameworkUrl.pathExtension).value != .xcframework
 }
