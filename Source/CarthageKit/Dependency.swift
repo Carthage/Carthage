@@ -50,6 +50,10 @@ public enum Dependency: Hashable {
 	public var relativePath: String {
 		return (Constants.checkoutsFolderPath as NSString).appendingPathComponent(name)
 	}
+
+	public var xcframeworkPath: String {
+		return (Constants.binariesFolderPath as NSString).appendingPathComponent("\(name).xcframework")
+	}
 }
 
 extension Dependency {

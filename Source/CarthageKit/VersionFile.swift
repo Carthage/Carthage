@@ -8,6 +8,8 @@ import XCDBLD
 public struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
+		case container = "container"
+		case libraryIdentifier = "identifier"
 		case hash = "hash"
 		case linking = "linking"
 		case swiftToolchainVersion = "swiftToolchainVersion"
@@ -15,6 +17,8 @@ public struct CachedFramework: Codable {
 
 	/// Name of the framework
 	public let name: String
+	public let container: String?
+	public let libraryIdentifier: String?
 	/// Hash of the framework
 	public let hash: String
     /// The linking type of the framework. One of `dynamic` or `static`. Defaults to `dynamic`
@@ -27,12 +31,21 @@ public struct CachedFramework: Codable {
 	}
 
 	/// The framework's expected location within a platform directory.
-	var relativePath: String {
+	func location(in buildDirectory: URL, sdk: SDK) -> URL {
+		if let container = container, let libraryIdentifier = libraryIdentifier {
+			return buildDirectory
+				.appendingPathComponent(container)
+				.appendingPathComponent(libraryIdentifier)
+				.appendingPathComponent("\(name).framework")
+		}
+		let platformDirectory = buildDirectory.appendingPathComponent(sdk.platformSimulatorlessFromHeuristic)
 		switch linking {
 		case .some(.static):
-			return "\(FrameworkType.staticFolderName)/\(name).framework"
+			return platformDirectory
+				.appendingPathComponent(FrameworkType.staticFolderName)
+				.appendingPathComponent("\(name).framework")
 		default:
-			return "\(name).framework"
+			return platformDirectory.appendingPathComponent("\(name).framework")
 		}
 	}
 }
@@ -130,10 +143,7 @@ public struct VersionFile: Codable {
 		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
-		return binariesDirectoryURL
-			.appendingPathComponent(platform.platformSimulatorlessFromHeuristic, isDirectory: true)
-			.resolvingSymlinksInPath()
-			.appendingPathComponent(cachedFramework.relativePath, isDirectory: true)
+		return cachedFramework.location(in: binariesDirectoryURL, sdk: platform)
 	}
 
 	/// Calculates the path of the binary inside the framework corresponding with a version file
@@ -204,7 +214,7 @@ public struct VersionFile: Codable {
 				} else {
 					return frameworkSwiftVersion(frameworkURL)
 						.map { swiftVersion -> Bool in
-							return swiftVersion == localSwiftVersion
+							return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
 						}
 						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
 				}
@@ -468,54 +478,73 @@ public func createVersionFileForCommitish(
 	}
 
 	struct FrameworkDetail {
-		let platformName: String
 		let frameworkName: String
+		let frameworkLocator: FrameworkLocator
 		let frameworkSwiftVersion: String?
-		let frameworkType: FrameworkType
+	}
+	enum FrameworkLocator {
+		case xcframework(name: String, libraryIdentifier: String)
+		case platformDirectory(name: String, linking: FrameworkType)
 	}
 
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
-			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
+			.skipRepeats()
+			.flatMap(.merge, { url -> SignalProducer<(URL, URL), CarthageError> in
+				return frameworkBundlesInURL(url)
+					.map { ($0.bundleURL, url) }
+					.flatMapError { _ in .empty }
+			})
+			.flatMap(.merge) { url, containerURL -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 				let frameworkName: String
-				let platformName: String
-				let frameworkType: FrameworkType
+				let frameworkLocator: FrameworkLocator
 				switch (
 					url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
 					url.deletingLastPathComponent().lastPathComponent,
 					url.deletingPathExtension().lastPathComponent
 				) {
+				case (containerURL.lastPathComponent, let libraryIdentifier, let name):
+					frameworkName = name
+					frameworkLocator = .xcframework(name: containerURL.lastPathComponent, libraryIdentifier: libraryIdentifier)
 				case (let platform, FrameworkType.staticFolderName, let name):
 					frameworkName = name
-					platformName = platform
-					frameworkType = .static
+					frameworkLocator = .platformDirectory(name: platform, linking: .static)
 				case (_, let platform, let name):
 					frameworkName = name
-					platformName = platform
-					frameworkType = .dynamic
+					frameworkLocator = .platformDirectory(name: platform, linking: .dynamic)
 				}
 
 				return frameworkSwiftVersionIfIsSwiftFramework(url)
 					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
-					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
-										     frameworkName: frameworkName,
-										     frameworkSwiftVersion: frameworkSwiftVersion,
-										     frameworkType: frameworkType)
-					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
-					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
+						let frameworkDetail = FrameworkDetail(
+							frameworkName: frameworkName,
+							frameworkLocator: frameworkLocator,
+							frameworkSwiftVersion: frameworkSwiftVersion
+						)
+						let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
+						let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+						return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
 				}
 			}
 			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
 				let hash = values.0
-				let platformName = values.1.platformName
 				let frameworkName = values.1.frameworkName
 				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
-				let frameworkType = values.1.frameworkType
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, linking: frameworkType, swiftToolchainVersion: frameworkSwiftVersion)
-				if var frameworks = platformCaches[platformName] {
+				let cachedFramework: CachedFramework
+				let platformName: String?
+
+				switch values.1.frameworkLocator {
+				case .platformDirectory(name: let name, linking: let linking):
+					platformName = name
+					cachedFramework = CachedFramework(name: frameworkName, container: nil, libraryIdentifier: nil, hash: hash, linking: linking, swiftToolchainVersion: frameworkSwiftVersion)
+				case .xcframework(name: let container, libraryIdentifier: let identifier):
+					let targetOS = identifier.components(separatedBy: "-")[0]
+					platformName = SDK.associatedSetOfKnownIn2019YearSDKs(targetOS).first?.platformSimulatorlessFromHeuristic
+					cachedFramework = CachedFramework(name: frameworkName, container: container, libraryIdentifier: identifier, hash: hash, linking: nil, swiftToolchainVersion: frameworkSwiftVersion)
+				}
+				if let platformName = platformName, var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
 				}

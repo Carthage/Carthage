@@ -32,10 +32,18 @@ public struct CopyFrameworksCommand: CommandProtocol {
 									carthage.println("warning: Ignoring \(frameworkName) because it does not support the current architecture\n")
 									return .empty
 								} else {
-									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
+									let copyFrameworks = copyAndStripFramework(
+										source,
+										target: target,
+										validArchitectures: validArchitectures,
+										strippingDebugSymbols: shouldStripDebugSymbols(),
+										queryingCodesignIdentityWith: codeSigningIdentity(),
+										copyingSymbolMapsInto: builtProductsFolder()
+									)
+									
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
-									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
-										.then(SignalProducer<(), CarthageError>.empty)
+									
+									return SignalProducer.merge(copyFrameworks, copydSYMs)
 								}
 							}
 					}
@@ -46,28 +54,8 @@ public struct CopyFrameworksCommand: CommandProtocol {
 	}
 }
 
-private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
-		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
-			let strip = stripFramework(
-				url,
-				keepingArchitectures: validArchitectures,
-				strippingDebugSymbols: shouldStripDebugSymbols(),
-				codesigningIdentity: codesigningIdentity
-			)
-			if buildActionIsArchiveOrInstall() {
-				return strip
-					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
-					.then(SignalProducer<(), CarthageError>.empty)
-			} else {
-				return strip
-			}
-		}
-}
-
 private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
 	return architecturesInPackage(framework)
-		.collect()
 		.map { architectures in
 			// Return all the architectures, present in the framework, that are valid.
 			validArchitectures.filter(architectures.contains)
@@ -165,9 +153,23 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 }
 
 private func validArchitectures() -> Result<[String], CarthageError> {
-	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
-		return architectures.components(separatedBy: " ")
-	}
+    let validArchs = getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
+        return architectures.components(separatedBy: " ")
+    }
+
+    if validArchs.error != nil {
+        return validArchs
+    }
+
+    let archs = getEnvironmentVariable("ARCHS").map { architectures -> [String] in
+        return architectures.components(separatedBy: " ")
+    }
+
+    if archs.error != nil {
+        return archs
+    }
+
+    return .success(validArchs.value!.filter(archs.value!.contains))
 }
 
 private func buildActionIsArchiveOrInstall() -> Bool {

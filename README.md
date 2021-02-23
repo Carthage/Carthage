@@ -10,9 +10,12 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 - [Installing Carthage](#installing-carthage)
 - [Adding frameworks to an application](#adding-frameworks-to-an-application)
 	- [Getting started](#getting-started)
-		- [If you're building for macOS](#if-youre-building-for-macos)
-		- [If you're building for iOS, tvOS, or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
-		- [For both platforms](#for-both-platforms)
+		- [Building platform-independent XCFrameworks](#building-platform-independent-xcframeworks-xcode-12-and-above)
+			- [Migrating a project from framework bundles to XCFrameworks](#migrating-a-project-from-framework-bundles-to-xcframeworks)
+		- [Building platform-specific framework bundles](#building-platform-specific-framework-bundles-default-for-xcode-11-and-below)
+			- [If you're building for macOS](#if-youre-building-for-macos)
+			- [If you're building for iOS, tvOS, or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
+		- [For all platforms](#for-all-platforms)
 		- [(Optionally) Add build phase to warn about outdated dependencies](#optionally-add-build-phase-to-warn-about-outdated-dependencies)
 		- [Swift binary framework download compatibility](#swift-binary-framework-download-compatibility)
 	- [Running a project that uses Carthage](#running-a-project-that-uses-carthage)
@@ -48,28 +51,10 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	github "Alamofire/Alamofire" ~> 4.7.2
 	```
 
-1. Run `carthage update`
+1. Run `carthage update --use-xcframeworks`
 1. A `Cartfile.resolved` file and a `Carthage` directory will appear in the same directory where your `.xcodeproj` or `.xcworkspace` is
-1. Drag the built `.framework` binaries from `Carthage/Build/<platform>` into your application’s Xcode project.
-1. If you are using Carthage for an application, follow the remaining steps, otherwise stop here.
-1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
-
-    ```sh
-    /usr/local/bin/carthage copy-frameworks
-    ```
-
-- Add the paths to the frameworks you want to use under “Input Files". For example:
-
-    ```
-    $(SRCROOT)/Carthage/Build/iOS/Alamofire.framework
-    ```
-
-- Add the paths to the copied frameworks to the “Output Files”. For example:
-
-    ```
-    $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
-    ```
-Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you're building for iOS, tvOS or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
+1. Drag the built `.xcframework` bundles from `Carthage/Build` into the "Frameworks and Libraries" section of your application’s Xcode project.
+1. If you are using Carthage for an application, select "Embed & Sign", otherwise "Do Not Embed".
 
 For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
 
@@ -83,7 +68,7 @@ There are multiple options for installing Carthage:
 
 * **MacPorts:** You can use [MacPorts](https://www.macports.org/) and install the `carthage` tool on your system simply by running `sudo port selfupdate` and `sudo port install carthage`. (note: if you previously installed the binary version of Carthage, you should delete `/Library/Frameworks/CarthageKit.framework`).
 
-* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 9.4 (Swift 4.1).
+* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 10.0 (Swift 4.2).
 
 ## Adding frameworks to an application
 
@@ -91,7 +76,39 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 ### Getting started
 
+#### Building platform-independent XCFrameworks (Xcode 12 and above)
+
+1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
+1. Run `carthage update --use-xcframeworks`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled XCFramework.
+1. On your application targets’ _General_ settings tab, in the _Frameworks, Libraries, and Embedded Content_ section, drag and drop each XCFramework you want to use from the [Carthage/Build][] folder on disk.
+
+##### Migrating a project from framework bundles to XCFrameworks
+
+We encourage using XCFrameworks as of version 0.37.0 (January 2021), and require XCFrameworks when building on an Apple Silicon Mac. Switching from discrete framework bundles to XCFrameworks requires a few changes to your project:
+
+<details>
+  <summary>Migration steps</summary>
+
+1. Delete your `Carthage/Build` folder to remove any existing framework bundles.
+1. Build new XCFrameworks by running `carthage build --use-xcframeworks`. Any other arguments you build with can be provided like normal.
+1. Remove references to the old frameworks in each of your targets:
+    - Delete references to Carthage frameworks from the target's _Frameworks, Libraries, and Embedded Content_ section and/or its _Link Binary with Libraries_ build phase.
+    - Delete references to Carthage frameworks from any _Copy Files_ build phases.
+    - Delete the target's `carthage copy-frameworks` build phase, if present.
+1. Add references to XCFrameworks in each of your targets:
+    - For an application target: In the _General_ settings tab, in the _Frameworks, Libraries, and Embedded Content_ section, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
+    - For a framework target: In the _Build Phases_ tab, in a _Link Binary with Libraries_ phase, drag and drop each XCFramework you use from the [Carthage/Build][] folder on disk.
+
+</details>
+
+#### Building platform-specific framework bundles (default for Xcode 11 and below)
+
+**Xcode 12+ incompatibility**: Multi-architecture platforms are not supported when building framework bundles in Xcode 12 and above. Prefer [building with XCFrameworks](#building-platform-independent-xcframeworks-xcode-12-and-above). If you need to build discrete framework bundles, [use a workaround xcconfig file](Documentation/Xcode12Workaround.md).
+
 ##### If you're building for macOS
+
+<details>
+	<summary>macOS-specific instructions</summary>
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update --platform macOS`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
@@ -103,7 +120,12 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. Click the _Destination_ drop-down menu and select _Products Directory_.
 1. For each framework you’re using, drag and drop its corresponding dSYM file.
 
+</details>
+
 ##### If you're building for iOS, tvOS, or watchOS
+
+<details>
+	<summary>Platform-specific instructions</summary>
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
@@ -141,12 +163,13 @@ This script works around an [App Store submission bug](http://www.openradar.me/r
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
 When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s `.xcarchive` bundle.
+</details>
 
-##### For both platforms
+#### For all platforms
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
-##### (Optionally) Add build phase to warn about outdated dependencies
+#### (Optionally) Add build phase to warn about outdated dependencies
 
 You can add a Run Script phase to automatically warn you when one of your dependencies is out of date.
 
@@ -156,7 +179,7 @@ You can add a Run Script phase to automatically warn you when one of your depend
 /usr/local/bin/carthage outdated --xcode-warnings 2>/dev/null
 ```
 
-##### Swift binary framework download compatibility
+#### Swift binary framework download compatibility
 
 Carthage will check to make sure that downloaded Swift (and mixed Objective-C/Swift) frameworks were built with the same version of Swift that is in use locally. If there is a version mismatch, Carthage will proceed to build the framework from source. If the framework cannot be built from source, Carthage will fail.
 
