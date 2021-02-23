@@ -669,7 +669,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.merge) { frameworksUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return SignalProducer<URL, CarthageError>(frameworksUrls)
 							.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
-                                return self.getBinaryFrameworkURL(url: url)
+								return self.getBinaryFrameworkURL(url: url)
 							}
 							.collect()
 							.flatMap(.merge) { destinationUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
@@ -716,21 +716,21 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
     
     /// Ensures binary framework has a valid extension and returns url in build folder
-    private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
-        return SignalProducer(result: FrameworkSuffix.from(string: url.pathExtension))
-            .flatMap(.merge) { frameworkSuffix -> SignalProducer<URL, CarthageError> in
-                switch frameworkSuffix {
-                case .xcframework:
-                    return SignalProducer<URL, CarthageError>(value: url)
-                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "", simulatorHeuristic: ""),
-                                                                             frameworkNameAndExtension: $0.lastPathComponent) }
-                case .framework:
-                    return platformForFramework(url)
-                        .attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
-                                                                             frameworkNameAndExtension: url.lastPathComponent) }
-                }
-            }
-    }
+	private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
+		return SignalProducer(result: FrameworkSuffix.from(string: url.pathExtension))
+			.flatMap(.merge) { frameworkSuffix -> SignalProducer<URL, CarthageError> in
+				switch frameworkSuffix {
+				case .xcframework:
+					return SignalProducer<URL, CarthageError>(value: url)
+						.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "", simulatorHeuristic: ""),
+																			 frameworkNameAndExtension: $0.lastPathComponent) }
+				case .framework:
+					return platformForFramework(url)
+						.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
+																			 frameworkNameAndExtension: url.lastPathComponent) }
+				}
+			}
+	}
 
 	/// Removes the file located at the given URL
 	///
@@ -1457,13 +1457,13 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 /// Sends the URL to each framework bundle found in the given directory.
 internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
-        .concat(filesInDirectory(directoryURL, "com.apple.xcframework"))
+		.concat(filesInDirectory(directoryURL, "com.apple.xcframework"))
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
-                let pathExtension = (pathComponent as NSString).pathExtension
-                return FrameworkSuffix.from(string: pathExtension).error == nil
+				let pathExtension = (pathComponent as NSString).pathExtension
+				return FrameworkSuffix.from(string: pathExtension).error == nil
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in
@@ -1473,7 +1473,7 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 			let packageType: PackageType? = bundle?.packageType
 
 			switch packageType {
-            case .xcframework?, .framework?, .bundle?:
+			case .xcframework?, .framework?, .bundle?:
 				return true
 			default:
 				// In case no Info.plist exists check the Mach-O fileType
