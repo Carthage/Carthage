@@ -41,10 +41,15 @@ extension ProjectLocator {
 			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive
 					.enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-					.map { _, url in url }
-					.filter { url in
-						return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
+					.filter { enumerator, url in
+						if directoriesToSkip.contains(where: { $0.hasSubdirectory(url) }) {
+							enumerator.skipDescendants()
+							return false
+						} else {
+							return true
+						}
 					}
+					.map { _, url in url }
 			}
 			.filterMap { url -> ProjectLocator? in
 				if let uti = url.typeIdentifier.value {

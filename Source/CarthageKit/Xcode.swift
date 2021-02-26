@@ -202,7 +202,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
 			.locate(in: directoryURL)
-			.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
+			.flatMap(.concurrent(limit: 4)) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
 				return project
 					.schemes()
 					.collect()
