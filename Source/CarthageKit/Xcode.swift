@@ -137,12 +137,12 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> Bool {
 	return frameworkURL.swiftmoduleURL() != nil
 }
 
-/// Emits the framework URL if it matches the local Swift version and errors if not.
-internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
+/// Completes if the framework URL matches the local Swift version and errors if it does not.
+internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<Void, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap { localSwiftVersion, frameworkSwiftVersion in
 			return localSwiftVersion == frameworkSwiftVersion || isModuleStableAPI(localSwiftVersion, frameworkSwiftVersion, frameworkURL)
-				? .success(frameworkURL)
+				? .success(())
 				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
 		}
 }
@@ -171,13 +171,18 @@ private func determineMajorMinorVersion(_ swiftVersion: String) -> Double? {
 	return Double(swiftVersion[range])
 }
 
-/// Emits the framework URL if it is compatible with the build environment and errors if not.
-internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
-	if isSwiftFramework(frameworkURL) {
-		return checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
-	} else {
-		return SignalProducer(value: frameworkURL)
-	}
+/// Completes if the framework URL if it is compatible with the build environment and errors if not.
+internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<Void, SwiftVersionError> {
+	return frameworkBundlesInURL(frameworkURL)
+		.mapError { _ in SwiftVersionError.unknownLocalSwiftVersion }
+		.flatMap(.concat) { bundle -> SignalProducer<Void, SwiftVersionError> in
+			if isSwiftFramework(bundle.bundleURL) {
+				return checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
+			} else {
+				return .empty
+			}
+		}
+
 }
 
 /// Creates a task description for executing `xcodebuild` with the given

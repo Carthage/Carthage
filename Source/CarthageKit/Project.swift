@@ -687,7 +687,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.merge) { pair -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return checkFrameworkCompatibility(pair.frameworkSourceURL, usingToolchain: toolchain)
 							.mapError { error in CarthageError.internalError(description: error.description) }
-							.reduce(into: pair) { (_, _) = ($0.1, $1) }
+							.then(SignalProducer(value: pair))
 					}
 					// If the framework is compatible copy it over to the destination folder in Carthage/Build
 					.flatMap(.merge) { pair -> SignalProducer<URL, CarthageError> in
