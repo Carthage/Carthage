@@ -1365,9 +1365,6 @@ extension Signal where Value: TaskEventType {
 }
 
 public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectures: Set<String>) -> SignalProducer<(Data, URL), CarthageError> {
-	guard isNotXCFramework(frameworkURL) else {
-		return SignalProducer<(Data, URL), CarthageError>.empty
-	}
 	return SignalProducer(value: frameworkURL)
 		.attemptMap(binaryURL)
 		.attemptMap {
