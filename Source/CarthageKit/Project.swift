@@ -717,19 +717,15 @@ public final class Project { // swiftlint:disable:this type_body_length
     
     /// Ensures binary framework has a valid extension and returns url in build folder
 	private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
-		return SignalProducer(result: FrameworkSuffix.from(string: url.pathExtension))
-			.flatMap(.merge) { frameworkSuffix -> SignalProducer<URL, CarthageError> in
-				switch frameworkSuffix {
-				case .xcframework:
-					return SignalProducer<URL, CarthageError>(value: url)
-						.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: SDK(name: "", simulatorHeuristic: ""),
-																			 frameworkNameAndExtension: $0.lastPathComponent) }
-				case .framework:
-					return platformForFramework(url)
-						.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
-																			 frameworkNameAndExtension: url.lastPathComponent) }
-				}
-			}
+		switch url.pathExtension {
+			case "xcframework":
+				return SignalProducer<URL, CarthageError>(value: url)
+					.map { self.directoryURL.appendingPathComponent(Constants.binariesFolderPath).appendingPathComponent($0.lastPathComponent) }
+			default:
+				return platformForFramework(url)
+					.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
+																		 frameworkNameAndExtension: url.lastPathComponent) }
+		}
 	}
 
 	/// Removes the file located at the given URL
@@ -1462,8 +1458,7 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 		.filter { url in
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
-				let pathExtension = (pathComponent as NSString).pathExtension
-				return FrameworkSuffix.from(string: pathExtension).error == nil
+				return ["framework", "xcframework"].contains((pathComponent as NSString).pathExtension)
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in
