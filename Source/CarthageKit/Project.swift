@@ -697,6 +697,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					// Copy .dSYM & .bcsymbolmap too
 					.flatMap(.merge) { frameworkDestinationURL -> SignalProducer<URL, CarthageError> in
+						guard frameworkDestinationURL.pathExtension != "xcframework" else {
+							// xcframeworks have embedded debug information which is not copied out.
+							return SignalProducer(value: frameworkDestinationURL)
+						}
 						return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
 							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
 							.then(SignalProducer(value: frameworkDestinationURL))
