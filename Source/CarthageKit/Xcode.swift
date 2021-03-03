@@ -837,9 +837,9 @@ func extractXCFrameworks(in buildDirectory: URL, for settings: BuildSettings) ->
 	let isRelativeToBuildDirectory = { (url: URL) -> Bool in
 		// `url` might not exist (e.g. it's "Carthage/Build/iOS" and an "iOS" directory was never created). In order
 		// for resolvingSymlinksInPath to resolve as much of the path as it can, reduce it to the nearest extant ancestor.
-		guard let extantURL = sequence(first: url, next: { $0.deletingLastPathComponent() })
-						.first(where: { (try? $0.checkResourceIsReachable()) == true }) else {
-			fatalError("No ancestor of \(url.path) is reachable")
+		var extantURL = url
+		while (try? extantURL.checkResourceIsReachable()) == nil {
+			extantURL.deleteLastPathComponent()
 		}
 		return extantURL.resolvingSymlinksInPath().path.starts(with: buildDirectory.resolvingSymlinksInPath().path)
 	}
