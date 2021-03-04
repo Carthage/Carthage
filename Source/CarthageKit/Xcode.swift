@@ -834,8 +834,14 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 /// Sends the temporary directory or `nil` if there are no xcframeworks to extract. The directory is _not_ deleted
 /// upon disposal, so that asynchronous build actions can use extracted frameworks after the producer has completed.
 func extractXCFrameworks(in buildDirectory: URL, for settings: BuildSettings) -> SignalProducer<URL?, CarthageError> {
-	let isRelativeToBuildDirectory = { (url: URL) in
-		url.resolvingSymlinksInPath().path.starts(with: buildDirectory.resolvingSymlinksInPath().path)
+	let isRelativeToBuildDirectory = { (url: URL) -> Bool in
+		// `url` might not exist (e.g. it's "Carthage/Build/iOS" and an "iOS" directory was never created). In order
+		// for resolvingSymlinksInPath to resolve as much of the path as it can, reduce it to the nearest extant ancestor.
+		var extantURL = url
+		while (try? extantURL.checkResourceIsReachable()) == nil {
+			extantURL.deleteLastPathComponent()
+		}
+		return extantURL.resolvingSymlinksInPath().path.starts(with: buildDirectory.resolvingSymlinksInPath().path)
 	}
 	guard let platformTripleOS = settings.platformTripleOS.value,
 				let frameworkSearchPaths = settings.frameworkSearchPaths.value,
