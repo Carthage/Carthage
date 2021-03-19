@@ -137,12 +137,12 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> Bool {
 	return frameworkURL.swiftmoduleURL() != nil
 }
 
-/// Emits the framework URL if it matches the local Swift version and errors if not.
-internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
+/// Completes if the framework URL matches the local Swift version and errors if it does not.
+internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<Void, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap { localSwiftVersion, frameworkSwiftVersion in
 			return localSwiftVersion == frameworkSwiftVersion || isModuleStableAPI(localSwiftVersion, frameworkSwiftVersion, frameworkURL)
-				? .success(frameworkURL)
+				? .success(())
 				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
 		}
 }
@@ -171,13 +171,19 @@ private func determineMajorMinorVersion(_ swiftVersion: String) -> Double? {
 	return Double(swiftVersion[range])
 }
 
-/// Emits the framework URL if it is compatible with the build environment and errors if not.
-internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
-	if isSwiftFramework(frameworkURL) {
-		return checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
-	} else {
-		return SignalProducer(value: frameworkURL)
-	}
+/// Completes if the framework URL if it is compatible with the build environment and errors if not.
+internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<Void, CarthageError> {
+	return frameworkBundlesInURL(frameworkURL)
+		.mapError { CarthageError.readFailed(frameworkURL, $0 as NSError) }
+		.flatMap(.concat) { bundle -> SignalProducer<Void, CarthageError> in
+			if isSwiftFramework(bundle.bundleURL) {
+				return checkSwiftFrameworkCompatibility(bundle.bundleURL, usingToolchain: toolchain)
+					.mapError { .internalError(description: $0.description) }
+			} else {
+				return .empty
+			}
+		}
+
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -323,6 +329,9 @@ public enum FrameworkType: String, Codable {
 internal enum PackageType: String {
 	/// A .framework package.
 	case framework = "FMWK"
+
+	/// A .xcframework package
+	case xcframework = "XFWK"
 
 	/// A .bundle package. Some frameworks might have this package type code
 	/// (e.g. https://github.com/ResearchKit/ResearchKit/blob/1.3.0/ResearchKit/Info.plist#L15-L16).
