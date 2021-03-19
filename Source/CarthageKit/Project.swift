@@ -743,11 +743,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, preferXCFrameworks: Bool, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
-			return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
+			return self.downloadMatchingBinaries(
+				for: dependency,
+				pinnedVersion: pinnedVersion,
+				fromRepository: repository,
+				preferXCFrameworks: preferXCFrameworks,
+				client: client
+			)
 				.flatMapError { error -> SignalProducer<URL, CarthageError> in
 					if !client.isAuthenticated {
 						return SignalProducer(error: error)
@@ -756,6 +762,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						for: dependency,
 						pinnedVersion: pinnedVersion,
 						fromRepository: repository,
+						preferXCFrameworks: preferXCFrameworks,
 						client: Client(server: server, isAuthenticated: false)
 					)
 				}
@@ -785,6 +792,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		for dependency: Dependency,
 		pinnedVersion: PinnedVersion,
 		fromRepository repository: Repository,
+		preferXCFrameworks: Bool,
 		client: Client
 	) -> SignalProducer<URL, CarthageError> {
 		return client.execute(repository.release(forTag: pinnedVersion.commitish))
@@ -812,11 +820,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
-					.filter { asset in
-						if asset.name.range(of: Constants.Project.binaryAssetPattern) == nil {
-							return false
+					.reduce(into: [:]) { (assetsByPackageType: inout [PackageType: [Release.Asset]], asset: Release.Asset) in
+						guard Constants.Project.binaryAssetContentTypes.contains(asset.contentType) else {
+							return
 						}
-						return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+						if asset.name.range(of: Constants.Project.frameworkBinaryAssetPattern) != nil {
+							assetsByPackageType[.framework, default: []].append(asset)
+						} else if asset.name.range(of: Constants.Project.xcframeworkBinaryAssetPattern) != nil {
+							assetsByPackageType[.xcframework, default: []].append(asset)
+						}
+					}
+					.flatMap(.concat) { assetsByPackageType -> SignalProducer<Release.Asset, CarthageError> in
+						let preferredAssets = assetsByPackageType[preferXCFrameworks ? .xcframework : .framework]
+						return SignalProducer(preferredAssets ?? assetsByPackageType.values.flatMap { $0 })
 					}
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
@@ -1182,7 +1198,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							guard options.useBinaries else {
 								return .empty
 							}
-							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
+							return self.installBinaries(for: dependency, pinnedVersion: version, preferXCFrameworks: options.useXCFrameworks, toolchain: options.toolchain)
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}

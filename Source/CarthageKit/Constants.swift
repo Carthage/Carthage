@@ -98,7 +98,8 @@ public struct Constants {
 
 		/// The text that needs to exist in a GitHub Release asset's name, for it to be
 		/// tried as a binary framework.
-		public static let binaryAssetPattern = ".framework"
+		public static let frameworkBinaryAssetPattern = ".framework"
+		public static let xcframeworkBinaryAssetPattern = ".xcframework"
 
 		/// MIME types allowed for GitHub Release assets, for them to be considered as
 		/// binary frameworks.
