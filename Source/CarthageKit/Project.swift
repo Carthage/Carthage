@@ -686,7 +686,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 					// Check if the framework are compatible with the current Swift version
 					.flatMap(.merge) { pair -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return checkFrameworkCompatibility(pair.frameworkSourceURL, usingToolchain: toolchain)
-							.mapError { error in CarthageError.internalError(description: error.description) }
 							.then(SignalProducer(value: pair))
 					}
 					// If the framework is compatible copy it over to the destination folder in Carthage/Build

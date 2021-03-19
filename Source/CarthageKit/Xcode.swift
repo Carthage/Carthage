@@ -172,12 +172,13 @@ private func determineMajorMinorVersion(_ swiftVersion: String) -> Double? {
 }
 
 /// Completes if the framework URL if it is compatible with the build environment and errors if not.
-internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<Void, SwiftVersionError> {
+internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<Void, CarthageError> {
 	return frameworkBundlesInURL(frameworkURL)
-		.mapError { _ in SwiftVersionError.unknownLocalSwiftVersion }
-		.flatMap(.concat) { bundle -> SignalProducer<Void, SwiftVersionError> in
+		.mapError { CarthageError.readFailed(frameworkURL, $0 as NSError) }
+		.flatMap(.concat) { bundle -> SignalProducer<Void, CarthageError> in
 			if isSwiftFramework(bundle.bundleURL) {
 				return checkSwiftFrameworkCompatibility(bundle.bundleURL, usingToolchain: toolchain)
+					.mapError { .internalError(description: $0.description) }
 			} else {
 				return .empty
 			}
