@@ -114,10 +114,11 @@ public func binaryAssetPrioritizingReducer(_ asset: Release.Asset) -> (keyName: 
 
 	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
 
-	return (priorities.lazy.compactMap {
-		var (potentialPatternRange, keyName) = (asset.name.range(of: $0), asset.name)
-		guard let patternRange = potentialPatternRange else { return nil }
+	for (pathExtension, priority) in priorities {
+		var (potentialPatternRange, keyName) = (asset.name.range(of: pathExtension), asset.name)
+		guard let patternRange = potentialPatternRange else { continue }
 		keyName.removeSubrange(patternRange)
-		return (keyName, asset, $1)
-	} as LazyMapSequence).first
+		return (keyName, asset, priority)
+	}
+	return nil
 }
