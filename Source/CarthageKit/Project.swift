@@ -824,10 +824,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 						guard Constants.Project.binaryAssetContentTypes.contains(asset.contentType) else {
 							return
 						}
-						if asset.name.range(of: Constants.Project.frameworkBinaryAssetPattern) != nil {
-							assetsByPackageType[.framework, default: []].append(asset)
-						} else if asset.name.range(of: Constants.Project.xcframeworkBinaryAssetPattern) != nil {
+						if asset.name.range(of: Constants.Project.xcframeworkBinaryAssetPattern, options: .caseInsensitive) != nil {
 							assetsByPackageType[.xcframework, default: []].append(asset)
+						} else if asset.name.range(of: Constants.Project.frameworkBinaryAssetPattern, options: .caseInsensitive) != nil {
+							assetsByPackageType[.framework, default: []].append(asset)
 						}
 					}
 					.flatMap(.concat) { assetsByPackageType -> SignalProducer<Release.Asset, CarthageError> in
