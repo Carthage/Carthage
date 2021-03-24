@@ -100,7 +100,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
-    
+
 	/// Whether to use authentication credentials from ~/.netrc file
 	/// to download binary only frameworks.
 	public var useNetrc = false
@@ -237,7 +237,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return SignalProducer(value: binaryProject)
 				} else {
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
-					
+
 					let request = self.buildURLRequest(for: binary.url, useNetrc: self.useNetrc)
 					return URLSession.proxiedSession.reactive.data(with: request)
 						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
@@ -253,8 +253,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.startOnQueue(self.cachedBinaryProjectsQueue)
 	}
-    
-    
+
+
 	/// Builds URL request
 	///
 	/// - Parameters:
@@ -264,7 +264,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private func buildURLRequest(for url: URL, useNetrc: Bool) -> URLRequest {
 		var request = URLRequest(url: url)
 		guard useNetrc else { return request }
-		
+
 		// When downloading a binary, `carthage` will take into account the user's
 		// `~/.netrc` file to determine authentication credentials
 		switch Netrc.load() {
@@ -717,7 +717,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
 	}
-    
+
     /// Ensures binary framework has a valid extension and returns url in build folder
 	private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
 		switch url.pathExtension {
@@ -820,19 +820,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
-					.reduce(into: [:]) { (assetsByPackageType: inout [PackageType: [Release.Asset]], asset: Release.Asset) in
-						guard Constants.Project.binaryAssetContentTypes.contains(asset.contentType) else {
-							return
-						}
-						if asset.name.range(of: Constants.Project.xcframeworkBinaryAssetPattern, options: .caseInsensitive) != nil {
-							assetsByPackageType[.xcframework, default: []].append(asset)
-						} else if asset.name.range(of: Constants.Project.frameworkBinaryAssetPattern, options: .caseInsensitive) != nil {
-							assetsByPackageType[.framework, default: []].append(asset)
-						}
+					.filterMap(binaryAssetPrioritizingReducer)
+					.reduce(into: [:] as [String: [Release.Asset: UInt8]]) { assetNames, prioritization in
+						let (key, asset, priority) = prioritization
+						if preferXCFrameworks == false, asset.name.lowercased().contains(".xcframework") { return }
+
+						let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
+						let bestPriority = assetPriorities.values.min()!
+						assetNames[key] = assetPriorities.filter { $1 == bestPriority }
 					}
-					.flatMap(.concat) { assetsByPackageType -> SignalProducer<Release.Asset, CarthageError> in
-						let preferredAssets = assetsByPackageType[preferXCFrameworks ? .xcframework : .framework]
-						return SignalProducer(preferredAssets ?? assetsByPackageType.values.flatMap { $0 })
+					.flatMap(.concat) { bestPriorityAssetsByKey -> SignalProducer<Release.Asset, CarthageError> in
+						SignalProducer(bestPriorityAssetsByKey.values.flatMap { $0.keys })
 					}
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
@@ -1510,8 +1508,8 @@ internal func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, Carth
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
-/// Sends the URL of the dSYM for which at least one of the UUIDs are common with 
-/// those of the given framework, or errors if there was an error parsing a dSYM 
+/// Sends the URL of the dSYM for which at least one of the UUIDs are common with
+/// those of the given framework, or errors if there was an error parsing a dSYM
 /// contained within the directory.
 private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
