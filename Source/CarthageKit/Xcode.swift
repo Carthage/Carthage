@@ -1430,7 +1430,15 @@ public func nonDestructivelyStripArchitectures(_ frameworkURL: URL, _ architectu
 private func stripArchitectures(_ packageURL: URL, _ architectures: Set<String>) -> SignalProducer<(), CarthageError> {
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<(), CarthageError> in
-			let arguments = [
+            // If there are no architectures to be stripped, then we don't
+            // need the lipo command at all. In fact, the assigment to arguments
+            // below would actually produce invalid input to the lipo command, with
+            // no -remove arguments
+            guard architectures.count > 0 else {
+                return SignalProducer<(), CarthageError>.empty
+            }
+
+            let arguments = [
 				[ binaryURL.absoluteURL.path ],
 				architectures.flatMap { [ "-remove", $0 ] },
 				[ "-output",  binaryURL.absoluteURL.path ],
