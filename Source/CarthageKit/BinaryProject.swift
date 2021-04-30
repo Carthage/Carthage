@@ -5,13 +5,13 @@ import Result
 public struct BinaryProject: Equatable {
 	private static let jsonDecoder = JSONDecoder()
 
-	public var versions: [PinnedVersion: URL]
+	public var versions: [PinnedVersion: [URL]]
 
 	public static func from(jsonData: Data) -> Result<BinaryProject, BinaryJSONError> {
 		return Result<[String: String], AnyError>(attempt: { try jsonDecoder.decode([String: String].self, from: jsonData) })
 			.mapError { .invalidJSON($0.error) }
 			.flatMap { json -> Result<BinaryProject, BinaryJSONError> in
-				var versions = [PinnedVersion: URL]()
+				var versions = [PinnedVersion: [URL]]()
 
 				for (key, value) in json {
 					let pinnedVersion: PinnedVersion
@@ -21,15 +21,37 @@ public struct BinaryProject: Equatable {
 					case let .failure(error):
 						return .failure(BinaryJSONError.invalidVersion(error))
 					}
-
-					guard let binaryURL = URL(string: value) else {
+					
+					var urlStrings: [String] = []
+					guard var components = URLComponents(string: value) else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
-					guard binaryURL.scheme == "file" || binaryURL.scheme == "https" else {
-						return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
+					components.queryItems = components.queryItems?.reduce(into: nil) { queryItems, item in
+						if item.name == "alt", let value = item.value {
+							urlStrings.append(value)
+						} else if queryItems == nil {
+							queryItems = [item]
+						} else {
+							queryItems!.append(item)
+						}
 					}
-
-					versions[pinnedVersion] = binaryURL
+					guard let string = components.string else {
+						return .failure(BinaryJSONError.invalidURL(value))
+					}
+					urlStrings.append(string)
+					
+					var binaryURLs: [URL] = []
+					for string in urlStrings {
+						guard let binaryURL = URL(string: string) else {
+							return .failure(BinaryJSONError.invalidURL(string))
+						}
+						guard binaryURL.scheme == "file" || binaryURL.scheme == "https" else {
+							return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
+						}
+						binaryURLs.append(binaryURL)
+					}
+					
+					versions[pinnedVersion] = binaryURLs
 				}
 
 				return .success(BinaryProject(versions: versions))

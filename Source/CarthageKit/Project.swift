@@ -820,10 +820,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
-					.filterMap(binaryAssetPrioritizingReducer)
-					.reduce(into: [:] as [String: [Release.Asset: UInt8]]) { assetNames, prioritization in
-						let (key, asset, priority) = prioritization
-						if preferXCFrameworks == false, asset.name.lowercased().contains(".xcframework") { return }
+					.reduce(into: [:] as [String: [Release.Asset: UInt8]]) { assetNames, asset in
+                        guard Constants.Project.binaryAssetContentTypes.contains(asset.contentType),
+                              preferXCFrameworks == false || asset.name.lowercased().contains(".xcframework"),
+                              let (key, priority) = binaryAssetPrioritization(forName: asset.name) else {
+                            return
+                        }
 
 						let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
 						let bestPriority = assetPriorities.values.min()!
@@ -1019,17 +1021,31 @@ public final class Project { // swiftlint:disable:this type_body_length
 		binary: BinaryURL,
 		pinnedVersion: PinnedVersion,
 		projectName: String,
-		toolchain: String?
+		toolchain: String?,
+		preferXCFrameworks: Bool
 	) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
 			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
-			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
-				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
-					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
+			.flatMap(.concat) { semanticVersion, binaryProject -> SignalProducer<(SemanticVersion, URL), CarthageError> in
+				guard let frameworkURLs = binaryProject.versions[pinnedVersion] else {
+					return SignalProducer(error: CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
 				}
-
-				return .success((semanticVersion, frameworkURL))
+				
+				let bestPriorityAssetsByKey = frameworkURLs.reduce(into: [:] as [String: [URL: UInt8]]) { assetNames, url in
+					guard preferXCFrameworks == false || url.lastPathComponent.lowercased().contains(".xcframework"),
+						  let (key, priority) = binaryAssetPrioritization(forName: url.lastPathComponent) else {
+						return
+					}
+					let assetPriorities = assetNames[key, default: [:]].merging([url: priority], uniquingKeysWith: min)
+					let bestPriority = assetPriorities.values.min()!
+					assetNames[key] = assetPriorities.filter { $1 == bestPriority }
+				}
+				let urlsAndVersions = bestPriorityAssetsByKey.values
+					.flatMap { $0.keys }
+					.map { (semanticVersion, $0) }
+				
+				return SignalProducer(urlsAndVersions)
 			}
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
@@ -1201,7 +1217,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 									return installed ? (dependency, version) : nil
 								}
 						case let .binary(binary):
-							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
+							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain, preferXCFrameworks: options.useXCFrameworks)
 								.then(.init(value: (dependency, version)))
 						}
 					}
