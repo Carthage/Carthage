@@ -108,17 +108,3 @@ public struct Constants {
 		public static let binaryAssetContentTypes = ["application/zip", "application/x-zip-compressed", "application/octet-stream"]
 	}
 }
-
-public func binaryAssetPrioritizingReducer(_ asset: Release.Asset) -> (keyName: String, asset: Release.Asset, priority: UInt8)? {
-	guard Constants.Project.binaryAssetContentTypes.contains(asset.contentType) else { return nil }
-
-	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
-
-	for (pathExtension, priority) in priorities {
-		var (potentialPatternRange, keyName) = (asset.name.range(of: pathExtension), asset.name)
-		guard let patternRange = potentialPatternRange else { continue }
-		keyName.removeSubrange(patternRange)
-		return (keyName, asset, priority)
-	}
-	return nil
-}

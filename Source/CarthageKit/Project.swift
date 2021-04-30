@@ -819,21 +819,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				self._projectEventsObserver.send(value: .downloadingBinaries(dependency, release.nameWithFallback))
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
-				return SignalProducer<Release.Asset, CarthageError>(release.assets)
-					.reduce(into: [:] as [String: [Release.Asset: UInt8]]) { assetNames, asset in
-                        guard Constants.Project.binaryAssetContentTypes.contains(asset.contentType),
-                              preferXCFrameworks == false || asset.name.lowercased().contains(".xcframework"),
-                              let (key, priority) = binaryAssetPrioritization(forName: asset.name) else {
-                            return
-                        }
-
-						let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
-						let bestPriority = assetPriorities.values.min()!
-						assetNames[key] = assetPriorities.filter { $1 == bestPriority }
-					}
-					.flatMap(.concat) { bestPriorityAssetsByKey -> SignalProducer<Release.Asset, CarthageError> in
-						SignalProducer(bestPriorityAssetsByKey.values.flatMap { $0.keys })
-					}
+				return SignalProducer<Release.Asset, CarthageError>(binaryAssetFilter(prioritizing: release.assets, preferXCFrameworks: preferXCFrameworks))
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
 
@@ -1032,17 +1018,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return SignalProducer(error: CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
 				}
 				
-				let bestPriorityAssetsByKey = frameworkURLs.reduce(into: [:] as [String: [URL: UInt8]]) { assetNames, url in
-					guard preferXCFrameworks == false || url.lastPathComponent.lowercased().contains(".xcframework"),
-						  let (key, priority) = binaryAssetPrioritization(forName: url.lastPathComponent) else {
-						return
-					}
-					let assetPriorities = assetNames[key, default: [:]].merging([url: priority], uniquingKeysWith: min)
-					let bestPriority = assetPriorities.values.min()!
-					assetNames[key] = assetPriorities.filter { $1 == bestPriority }
-				}
-				let urlsAndVersions = bestPriorityAssetsByKey.values
-					.flatMap { $0.keys }
+				let urlsAndVersions = binaryAssetFilter(prioritizing: frameworkURLs, preferXCFrameworks: preferXCFrameworks)
 					.map { (semanticVersion, $0) }
 				
 				return SignalProducer(urlsAndVersions)
@@ -1663,3 +1639,48 @@ public func cloneOrFetch(
 				}
 		}
 }
+
+private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8)? {
+	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
+	
+	for (pathExtension, priority) in priorities {
+		var (potentialPatternRange, keyName) = (assetName.range(of: pathExtension), assetName)
+		guard let patternRange = potentialPatternRange else { continue }
+		keyName.removeSubrange(patternRange)
+		return (keyName, priority)
+	}
+	return nil
+}
+
+/**
+Given a list of known assets for a release, parses asset names to identify XCFramework assets, and returns which assets should be downloaded.
+
+For example:
+```
+>>> bestPriorityAssets(
+		among: [Foo.xcframework.zip, Foo.framework.zip, Bar.framework.zip],
+		preferXCFrameworks: true
+	)
+[Foo.xcframework.zip, Bar.framework.zip]
+```
+*/
+private func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A], preferXCFrameworks: Bool) -> [A] {
+	let bestPriorityAssetsByKey = assets.reduce(into: [:] as [String: [A: UInt8]]) { assetNames, asset in
+		guard preferXCFrameworks || !asset.name.lowercased().contains(".xcframework"),
+			  let (key, priority) = binaryAssetPrioritization(forName: asset.name) else {
+			return
+		}
+		let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
+		let bestPriority = assetPriorities.values.min()!
+		assetNames[key] = assetPriorities.filter { $1 == bestPriority }
+	}
+	return bestPriorityAssetsByKey.values.flatMap { $0.keys }
+}
+
+private protocol AssetNameConvertible: Hashable {
+	var name: String { get }
+}
+extension URL: AssetNameConvertible {
+	var name: String { return lastPathComponent }
+}
+extension Release.Asset: AssetNameConvertible {}
