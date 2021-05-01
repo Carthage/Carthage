@@ -1,0 +1,29 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  integration_tests:
+    runs-on: macOS-10.14
+    strategy:
+      matrix:
+        xcode: [10.1, 10.3]
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Carthage
+      run: |
+        brew uninstall carthage
+        make install
+    - name: Run bats IntegrationTests
+      run: |
+        brew install bats
+        bats IntegrationTests
