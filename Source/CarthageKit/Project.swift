@@ -1,5 +1,6 @@
 // swiftlint:disable file_length
 
+import CommonCrypto
 import Foundation
 import Result
 import ReactiveSwift
@@ -1038,8 +1039,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
-		let fileName = url.lastPathComponent
-		let fileURL = fileURLToCachedBinaryDependency(dependency, version, fileName)
+		let fileURL = downloadURLToCachedBinaryDependency(dependency, version, url)
 
 		if FileManager.default.fileExists(atPath: fileURL.path) {
 			return SignalProducer(value: fileURL)
@@ -1334,9 +1334,21 @@ private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release,
 }
 
 /// Constructs a file URL to where the binary only framework download should be cached
-private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ fileName: String) -> URL {
-	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework.zip
-	return Constants.Dependency.assetsURL.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)")
+private func downloadURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ url: URL) -> URL {
+  var urlString = url.absoluteString
+  var digest = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
+  _ = digest.withUnsafeMutableBytes { buffer in
+    urlString.withUTF8 { data in
+      CC_SHA256(UnsafeRawPointer(data.baseAddress!), CC_LONG(data.count), buffer)
+    }
+  }
+  let hexDigest = digest.map { String(format: "%02hhx", $0) }.joined()
+  let fileName = url.deletingPathExtension().lastPathComponent
+  let fileExtension = url.pathExtension
+
+	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework-578d2a1e3a62983f70dfd8d0b04531b77615cc381edd603813657372d40a8fa1.zip
+	return Constants.Dependency.assetsURL
+    .appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)-\(hexDigest).\(fileExtension)")
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
