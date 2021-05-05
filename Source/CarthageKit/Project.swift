@@ -1340,20 +1340,20 @@ private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release,
 
 /// Constructs a file URL to where the binary only framework download should be cached
 private func downloadURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ url: URL) -> URL {
-  var urlString = url.absoluteString
-  var digest = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
-  _ = digest.withUnsafeMutableBytes { buffer in
-    urlString.withUTF8 { data in
-      CC_SHA256(UnsafeRawPointer(data.baseAddress!), CC_LONG(data.count), buffer)
-    }
-  }
-  let hexDigest = digest.map { String(format: "%02hhx", $0) }.joined()
-  let fileName = url.deletingPathExtension().lastPathComponent
-  let fileExtension = url.pathExtension
+	let urlBytes = url.absoluteString.utf8CString
+	var digest = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
+	_ = digest.withUnsafeMutableBytes { buffer in
+		urlBytes.withUnsafeBytes { data in
+			CC_SHA256(data.baseAddress!, CC_LONG(urlBytes.count), buffer)
+		}
+	}
+	let hexDigest = digest.map { String(format: "%02hhx", $0) }.joined()
+	let fileName = url.deletingPathExtension().lastPathComponent
+	let fileExtension = url.pathExtension
 
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework-578d2a1e3a62983f70dfd8d0b04531b77615cc381edd603813657372d40a8fa1.zip
 	return Constants.Dependency.assetsURL
-    .appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)-\(hexDigest).\(fileExtension)")
+		.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)-\(hexDigest).\(fileExtension)")
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
