@@ -298,6 +298,8 @@ Carthage can automatically use prebuilt frameworks, instead of building from scr
 To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries. The directory structure of the archive is free form but, __frameworks should only appear once in the archive__ as they will be copied
 to `Carthage/Build/<platform>` based on their name (e.g. `ReactiveCocoa.framework`).
 
+To offer prebuilt XCFrameworks, build with `--use-xcframeworks` and follow the same process to zip up all XCFrameworks into one archive. Include `.xcframework` in the attachment name. Starting in version 0.38.0, Carthage prefers downloading `.xcframework` attachments when `--use-xcframeworks` is passed.
+
 You can perform the archiving operation with carthage itself using:
 
 ```sh
