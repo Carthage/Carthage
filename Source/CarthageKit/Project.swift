@@ -820,7 +820,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 				self._projectEventsObserver.send(value: .downloadingBinaries(dependency, release.nameWithFallback))
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
-				return SignalProducer<Release.Asset, CarthageError>(binaryAssetFilter(prioritizing: release.assets, preferXCFrameworks: preferXCFrameworks))
+				let potentialFrameworkAssets = release.assets.filter { asset in
+					let matchesContentType = Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+					let matchesName = asset.name.contains(Constants.Project.frameworkBinaryAssetPattern) || asset.name.contains(Constants.Project.xcframeworkBinaryAssetPattern)
+					return matchesContentType && matchesName
+				}
+				return SignalProducer<Release.Asset, CarthageError>(binaryAssetFilter(prioritizing: potentialFrameworkAssets, preferXCFrameworks: preferXCFrameworks))
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
 
@@ -1652,7 +1657,7 @@ public func cloneOrFetch(
 		}
 }
 
-private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8)? {
+private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8) {
 	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
 	
 	for (pathExtension, priority) in priorities {
@@ -1661,7 +1666,9 @@ private func binaryAssetPrioritization(forName assetName: String) -> (keyName: S
 		keyName.removeSubrange(patternRange)
 		return (keyName, priority)
 	}
-	return nil
+
+	// If we can't tell whether this is a framework or an xcframework, return it with a low priority.
+	return (assetName, 70)
 }
 
 /**
@@ -1669,8 +1676,8 @@ Given a list of known assets for a release, parses asset names to identify XCFra
 
 For example:
 ```
->>> bestPriorityAssets(
-		among: [Foo.xcframework.zip, Foo.framework.zip, Bar.framework.zip],
+>>> binaryAssetFilter(
+		prioritizing: [Foo.xcframework.zip, Foo.framework.zip, Bar.framework.zip],
 		preferXCFrameworks: true
 	)
 [Foo.xcframework.zip, Bar.framework.zip]
@@ -1678,10 +1685,11 @@ For example:
 */
 private func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A], preferXCFrameworks: Bool) -> [A] {
 	let bestPriorityAssetsByKey = assets.reduce(into: [:] as [String: [A: UInt8]]) { assetNames, asset in
-		guard preferXCFrameworks || !asset.name.lowercased().contains(".xcframework"),
-			  let (key, priority) = binaryAssetPrioritization(forName: asset.name) else {
+		if asset.name.lowercased().contains(".xcframework") && !preferXCFrameworks {
+			// Skip assets that look like xcframework when --use-xcframeworks is not passed.
 			return
 		}
+		let (key, priority) = binaryAssetPrioritization(forName: asset.name)
 		let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
 		let bestPriority = assetPriorities.values.min()!
 		assetNames[key] = assetPriorities.filter { $1 == bestPriority }
