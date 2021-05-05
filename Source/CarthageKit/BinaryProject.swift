@@ -38,7 +38,7 @@ public struct BinaryProject: Equatable {
 					guard let string = components.string else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
-					urlStrings.append(string)
+					urlStrings.insert(string, at: 0)
 					
 					var binaryURLs: [URL] = []
 					for string in urlStrings {

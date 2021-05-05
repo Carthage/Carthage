@@ -26,8 +26,8 @@ class BinaryProjectSpec: QuickSpec {
 						URL(string: "https://my.domain.com/some/other/alternate.zip")!,
 					],
 					PinnedVersion("1.0.2"): [
-						URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
-						URL(string: "https://my.domain.com/release/1.0.1/xcframework.zip")!
+						URL(string: "https://my.domain.com/release/1.0.2/framework.zip")!,
+						URL(string: "https://my.domain.com/release/1.0.2/xcframework.zip")!
 					],
 				])
 
