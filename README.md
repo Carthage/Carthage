@@ -291,7 +291,7 @@ Carthage determines which versions of your framework are available by searching 
 
 Tags without any version number, or with any characters following the version number (e.g., `1.2-alpha-1`) are currently unsupported, and will be ignored.
 
-### Archive prebuilt frameworks into one zip file
+### Archive prebuilt frameworks into zip files
 
 Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository or via a binary project definition file.
 
