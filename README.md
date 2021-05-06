@@ -31,7 +31,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	- [Share your Xcode schemes](#share-your-xcode-schemes)
 	- [Resolve build failures](#resolve-build-failures)
 	- [Tag stable releases](#tag-stable-releases)
-	- [Archive prebuilt frameworks into one zip file](#archive-prebuilt-frameworks-into-one-zip-file)
+	- [Archive prebuilt frameworks into zip files](#archive-prebuilt-frameworks-into-zip-files)
 		- [Use travis-ci to upload your tagged prebuilt frameworks](#use-travis-ci-to-upload-your-tagged-prebuilt-frameworks)
 	- [Build static frameworks to speed up your app’s launch times](#build-static-frameworks-to-speed-up-your-apps-launch-times)
 	- [Declare your compatibility](#declare-your-compatibility)
