@@ -11,15 +11,24 @@ class BinaryProjectSpec: QuickSpec {
 				let jsonData = (
 					"{" +
 					"\"1.0\": \"https://my.domain.com/release/1.0.0/framework.zip\"," +
-					"\"1.0.1\": \"https://my.domain.com/release/1.0.1/framework.zip\"" +
+					"\"1.0.1\": \"https://my.domain.com/release/1.0.1/framework.zip?alt=https://my.domain.com/release/1.0.1/xcframework.zip&alt=https://my.domain.com/some/other/alternate.zip\"," +
+					"\"1.0.2\": \"https://my.domain.com/release/1.0.2/framework.zip?alt=https%3A%2F%2Fmy.domain.com%2Frelease%2F1.0.2%2Fxcframework.zip\"" +
 					"}"
 					).data(using: .utf8)!
 
 				let actualBinaryProject = BinaryProject.from(jsonData: jsonData).value
 
 				let expectedBinaryProject = BinaryProject(versions: [
-					PinnedVersion("1.0"): URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!,
-					PinnedVersion("1.0.1"): URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
+					PinnedVersion("1.0"): [URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!],
+					PinnedVersion("1.0.1"): [
+						URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
+						URL(string: "https://my.domain.com/release/1.0.1/xcframework.zip")!,
+						URL(string: "https://my.domain.com/some/other/alternate.zip")!,
+					],
+					PinnedVersion("1.0.2"): [
+						URL(string: "https://my.domain.com/release/1.0.2/framework.zip")!,
+						URL(string: "https://my.domain.com/release/1.0.2/xcframework.zip")!
+					],
 				])
 
 				expect(actualBinaryProject) == expectedBinaryProject
@@ -79,7 +88,7 @@ class BinaryProjectSpec: QuickSpec {
 				let actualBinaryProject = BinaryProject.from(jsonData: jsonData).value
 
 				let expectedBinaryProject = BinaryProject(versions: [
-					PinnedVersion("1.0"): URL(string: "file:///my/domain/com/framework.zip")!,
+					PinnedVersion("1.0"): [URL(string: "file:///my/domain/com/framework.zip")!],
 				])
 
 				expect(actualBinaryProject) == expectedBinaryProject

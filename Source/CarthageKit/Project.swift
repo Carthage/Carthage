@@ -1,5 +1,6 @@
 // swiftlint:disable file_length
 
+import CommonCrypto
 import Foundation
 import Result
 import ReactiveSwift
@@ -100,7 +101,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
-    
+
 	/// Whether to use authentication credentials from ~/.netrc file
 	/// to download binary only frameworks.
 	public var useNetrc = false
@@ -237,7 +238,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return SignalProducer(value: binaryProject)
 				} else {
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
-					
+
 					let request = self.buildURLRequest(for: binary.url, useNetrc: self.useNetrc)
 					return URLSession.proxiedSession.reactive.data(with: request)
 						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
@@ -253,8 +254,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.startOnQueue(self.cachedBinaryProjectsQueue)
 	}
-    
-    
+
+
 	/// Builds URL request
 	///
 	/// - Parameters:
@@ -264,7 +265,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private func buildURLRequest(for url: URL, useNetrc: Bool) -> URLRequest {
 		var request = URLRequest(url: url)
 		guard useNetrc else { return request }
-		
+
 		// When downloading a binary, `carthage` will take into account the user's
 		// `~/.netrc` file to determine authentication credentials
 		switch Netrc.load() {
@@ -717,7 +718,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
 	}
-    
+
     /// Ensures binary framework has a valid extension and returns url in build folder
 	private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
 		switch url.pathExtension {
@@ -743,11 +744,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, preferXCFrameworks: Bool, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
-			return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
+			return self.downloadMatchingBinaries(
+				for: dependency,
+				pinnedVersion: pinnedVersion,
+				fromRepository: repository,
+				preferXCFrameworks: preferXCFrameworks,
+				client: client
+			)
 				.flatMapError { error -> SignalProducer<URL, CarthageError> in
 					if !client.isAuthenticated {
 						return SignalProducer(error: error)
@@ -756,6 +763,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						for: dependency,
 						pinnedVersion: pinnedVersion,
 						fromRepository: repository,
+						preferXCFrameworks: preferXCFrameworks,
 						client: Client(server: server, isAuthenticated: false)
 					)
 				}
@@ -785,6 +793,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		for dependency: Dependency,
 		pinnedVersion: PinnedVersion,
 		fromRepository repository: Repository,
+		preferXCFrameworks: Bool,
 		client: Client
 	) -> SignalProducer<URL, CarthageError> {
 		return client.execute(repository.release(forTag: pinnedVersion.commitish))
@@ -811,13 +820,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 				self._projectEventsObserver.send(value: .downloadingBinaries(dependency, release.nameWithFallback))
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
-				return SignalProducer<Release.Asset, CarthageError>(release.assets)
-					.filter { asset in
-						if asset.name.range(of: Constants.Project.binaryAssetPattern) == nil {
-							return false
-						}
-						return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
-					}
+				let potentialFrameworkAssets = release.assets.filter { asset in
+					let matchesContentType = Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+					let matchesName = asset.name.contains(Constants.Project.frameworkBinaryAssetPattern) || asset.name.contains(Constants.Project.xcframeworkBinaryAssetPattern)
+					return matchesContentType && matchesName
+				}
+				return SignalProducer<Release.Asset, CarthageError>(binaryAssetFilter(prioritizing: potentialFrameworkAssets, preferXCFrameworks: preferXCFrameworks))
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
 
@@ -1005,17 +1013,21 @@ public final class Project { // swiftlint:disable:this type_body_length
 		binary: BinaryURL,
 		pinnedVersion: PinnedVersion,
 		projectName: String,
-		toolchain: String?
+		toolchain: String?,
+		preferXCFrameworks: Bool
 	) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
 			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
-			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
-				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
-					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
+			.flatMap(.concat) { semanticVersion, binaryProject -> SignalProducer<(SemanticVersion, URL), CarthageError> in
+				guard let frameworkURLs = binaryProject.versions[pinnedVersion] else {
+					return SignalProducer(error: CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
 				}
-
-				return .success((semanticVersion, frameworkURL))
+				
+				let urlsAndVersions = binaryAssetFilter(prioritizing: frameworkURLs, preferXCFrameworks: preferXCFrameworks)
+					.map { (semanticVersion, $0) }
+				
+				return SignalProducer(urlsAndVersions)
 			}
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
@@ -1032,8 +1044,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
-		let fileName = url.lastPathComponent
-		let fileURL = fileURLToCachedBinaryDependency(dependency, version, fileName)
+		let fileURL = downloadURLToCachedBinaryDependency(dependency, version, url)
 
 		if FileManager.default.fileExists(atPath: fileURL.path) {
 			return SignalProducer(value: fileURL)
@@ -1182,12 +1193,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 							guard options.useBinaries else {
 								return .empty
 							}
-							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
+							return self.installBinaries(for: dependency, pinnedVersion: version, preferXCFrameworks: options.useXCFrameworks, toolchain: options.toolchain)
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}
 						case let .binary(binary):
-							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
+							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain, preferXCFrameworks: options.useXCFrameworks)
 								.then(.init(value: (dependency, version)))
 						}
 					}
@@ -1328,9 +1339,21 @@ private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release,
 }
 
 /// Constructs a file URL to where the binary only framework download should be cached
-private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ fileName: String) -> URL {
-	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework.zip
-	return Constants.Dependency.assetsURL.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)")
+private func downloadURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ url: URL) -> URL {
+	let urlBytes = url.absoluteString.utf8CString
+	var digest = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
+	_ = digest.withUnsafeMutableBytes { buffer in
+		urlBytes.withUnsafeBytes { data in
+			CC_SHA256(data.baseAddress!, CC_LONG(urlBytes.count), buffer)
+		}
+	}
+	let hexDigest = digest.map { String(format: "%02hhx", $0) }.joined()
+	let fileName = url.deletingPathExtension().lastPathComponent
+	let fileExtension = url.pathExtension
+
+	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework-578d2a1e3a62983f70dfd8d0b04531b77615cc381edd603813657372d40a8fa1.zip
+	return Constants.Dependency.assetsURL
+		.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)-\(hexDigest).\(fileExtension)")
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
@@ -1494,8 +1517,8 @@ internal func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, Carth
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
-/// Sends the URL of the dSYM for which at least one of the UUIDs are common with 
-/// those of the given framework, or errors if there was an error parsing a dSYM 
+/// Sends the URL of the dSYM for which at least one of the UUIDs are common with
+/// those of the given framework, or errors if there was an error parsing a dSYM
 /// contained within the directory.
 private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
@@ -1633,3 +1656,51 @@ public func cloneOrFetch(
 				}
 		}
 }
+
+private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8) {
+	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
+	
+	for (pathExtension, priority) in priorities {
+		var (potentialPatternRange, keyName) = (assetName.range(of: pathExtension), assetName)
+		guard let patternRange = potentialPatternRange else { continue }
+		keyName.removeSubrange(patternRange)
+		return (keyName, priority)
+	}
+
+	// If we can't tell whether this is a framework or an xcframework, return it with a low priority.
+	return (assetName, 70)
+}
+
+/**
+Given a list of known assets for a release, parses asset names to identify XCFramework assets, and returns which assets should be downloaded.
+
+For example:
+```
+>>> binaryAssetFilter(
+		prioritizing: [Foo.xcframework.zip, Foo.framework.zip, Bar.framework.zip],
+		preferXCFrameworks: true
+	)
+[Foo.xcframework.zip, Bar.framework.zip]
+```
+*/
+private func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A], preferXCFrameworks: Bool) -> [A] {
+	let bestPriorityAssetsByKey = assets.reduce(into: [:] as [String: [A: UInt8]]) { assetNames, asset in
+		if asset.name.lowercased().contains(".xcframework") && !preferXCFrameworks {
+			// Skip assets that look like xcframework when --use-xcframeworks is not passed.
+			return
+		}
+		let (key, priority) = binaryAssetPrioritization(forName: asset.name)
+		let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
+		let bestPriority = assetPriorities.values.min()!
+		assetNames[key] = assetPriorities.filter { $1 == bestPriority }
+	}
+	return bestPriorityAssetsByKey.values.flatMap { $0.keys }
+}
+
+private protocol AssetNameConvertible: Hashable {
+	var name: String { get }
+}
+extension URL: AssetNameConvertible {
+	var name: String { return lastPathComponent }
+}
+extension Release.Asset: AssetNameConvertible {}

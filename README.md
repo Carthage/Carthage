@@ -31,7 +31,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	- [Share your Xcode schemes](#share-your-xcode-schemes)
 	- [Resolve build failures](#resolve-build-failures)
 	- [Tag stable releases](#tag-stable-releases)
-	- [Archive prebuilt frameworks into one zip file](#archive-prebuilt-frameworks-into-one-zip-file)
+	- [Archive prebuilt frameworks into zip files](#archive-prebuilt-frameworks-into-zip-files)
 		- [Use travis-ci to upload your tagged prebuilt frameworks](#use-travis-ci-to-upload-your-tagged-prebuilt-frameworks)
 	- [Build static frameworks to speed up your app’s launch times](#build-static-frameworks-to-speed-up-your-apps-launch-times)
 	- [Declare your compatibility](#declare-your-compatibility)
@@ -291,12 +291,14 @@ Carthage determines which versions of your framework are available by searching 
 
 Tags without any version number, or with any characters following the version number (e.g., `1.2-alpha-1`) are currently unsupported, and will be ignored.
 
-### Archive prebuilt frameworks into one zip file
+### Archive prebuilt frameworks into zip files
 
 Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository or via a binary project definition file.
 
 To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries. The directory structure of the archive is free form but, __frameworks should only appear once in the archive__ as they will be copied
 to `Carthage/Build/<platform>` based on their name (e.g. `ReactiveCocoa.framework`).
+
+To offer prebuilt XCFrameworks, build with `--use-xcframeworks` and follow the same process to zip up all XCFrameworks into one archive. Include `.xcframework` in the attachment name. Starting in version 0.38.0, Carthage prefers downloading `.xcframework` attachments when `--use-xcframeworks` is passed.
 
 You can perform the archiving operation with carthage itself using:
 
