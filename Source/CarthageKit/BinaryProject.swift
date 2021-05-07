@@ -44,6 +44,9 @@ public struct BinaryProject: Equatable {
 					guard let firstURL = components.url else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
+					guard firstURL.scheme == "file" || firstURL.scheme == "https" else {
+						return .failure(BinaryJSONError.nonHTTPSURL(firstURL))
+					}
 					var binaryURLs: [URL] = [firstURL]
 
 					if let extractedURLs = extractedURLs {
