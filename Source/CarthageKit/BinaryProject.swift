@@ -22,33 +22,40 @@ public struct BinaryProject: Equatable {
 						return .failure(BinaryJSONError.invalidVersion(error))
 					}
 					
-					var urlStrings: [String] = []
 					guard var components = URLComponents(string: value) else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
-					components.queryItems = components.queryItems?.reduce(into: nil) { queryItems, item in
+
+					struct ExtractedURLs {
+						var remainingQueryItems: [URLQueryItem]? = nil
+						var urlStrings: [String] = []
+					}
+					let extractedURLs = components.queryItems?.reduce(into: ExtractedURLs()) { state, item in
 						if item.name == "alt", let value = item.value {
-							urlStrings.append(value)
-						} else if queryItems == nil {
-							queryItems = [item]
+							state.urlStrings.append(value)
+						} else if state.remainingQueryItems == nil {
+							state.remainingQueryItems = [item]
 						} else {
-							queryItems!.append(item)
+							state.remainingQueryItems!.append(item)
 						}
 					}
-					guard let string = components.string else {
+					components.queryItems = extractedURLs?.remainingQueryItems
+
+					guard let firstURL = components.url else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
-					urlStrings.insert(string, at: 0)
-					
-					var binaryURLs: [URL] = []
-					for string in urlStrings {
-						guard let binaryURL = URL(string: string) else {
-							return .failure(BinaryJSONError.invalidURL(string))
+					var binaryURLs: [URL] = [firstURL]
+
+					if let extractedURLs = extractedURLs {
+						for string in extractedURLs.urlStrings {
+							guard let binaryURL = URL(string: string) else {
+								return .failure(BinaryJSONError.invalidURL(string))
+							}
+							guard binaryURL.scheme == "file" || binaryURL.scheme == "https" else {
+								return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
+							}
+							binaryURLs.append(binaryURL)
 						}
-						guard binaryURL.scheme == "file" || binaryURL.scheme == "https" else {
-							return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
-						}
-						binaryURLs.append(binaryURL)
 					}
 					
 					versions[pinnedVersion] = binaryURLs
