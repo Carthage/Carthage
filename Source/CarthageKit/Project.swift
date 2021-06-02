@@ -1657,8 +1657,13 @@ public func cloneOrFetch(
 		}
 }
 
-private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8) {
-	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
+private func binaryAssetPrioritization(forName assetName: String, preferXCFrameworks: Bool) -> (keyName: String, priority: UInt8) {
+	let priorities: KeyValuePairs<String, UInt8>
+	if preferXCFrameworks {
+		priorities = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
+	} else {
+		priorities = [".xcframework": 40 as UInt8, ".XCFramework": 40, ".XCframework": 40, ".framework": 10]
+	}
 	
 	for (pathExtension, priority) in priorities {
 		var (potentialPatternRange, keyName) = (assetName.range(of: pathExtension), assetName)
@@ -1683,13 +1688,14 @@ For example:
 [Foo.xcframework.zip, Bar.framework.zip]
 ```
 */
-private func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A], preferXCFrameworks: Bool) -> [A] {
+func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A], preferXCFrameworks: Bool) -> [A] {
 	let bestPriorityAssetsByKey = assets.reduce(into: [:] as [String: [A: UInt8]]) { assetNames, asset in
-		if asset.name.lowercased().contains(".xcframework") && !preferXCFrameworks {
-			// Skip assets that look like xcframework when --use-xcframeworks is not passed.
+		if asset.name.lowercased().contains(".xcframework") && !preferXCFrameworks && A.skipsUnwantedXCFrameworks {
+			// Skip assets that look like xcframeworks when --use-xcframeworks is not passed _and_ a source-based fallback is
+			// available (i.e. this is a GitHub release asset).
 			return
 		}
-		let (key, priority) = binaryAssetPrioritization(forName: asset.name)
+		let (key, priority) = binaryAssetPrioritization(forName: asset.name, preferXCFrameworks: preferXCFrameworks)
 		let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
 		let bestPriority = assetPriorities.values.min()!
 		assetNames[key] = assetPriorities.filter { $1 == bestPriority }
@@ -1697,10 +1703,18 @@ private func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A]
 	return bestPriorityAssetsByKey.values.flatMap { $0.keys }
 }
 
-private protocol AssetNameConvertible: Hashable {
+protocol AssetNameConvertible: Hashable {
 	var name: String { get }
+	static var skipsUnwantedXCFrameworks: Bool { get }
 }
 extension URL: AssetNameConvertible {
 	var name: String { return lastPathComponent }
+
+	// Binary dependencies must pick an XCFramework if it's the only asset available. Otherwise, Carthage will download
+	// nothing unless --use-xcframeworks is passed.
+	static var skipsUnwantedXCFrameworks: Bool { false }
 }
-extension Release.Asset: AssetNameConvertible {}
+extension Release.Asset: AssetNameConvertible {
+	// GitHub releases should skip downloading and fall back to building from source if only an XCFramework is available.
+	static var skipsUnwantedXCFrameworks: Bool { true }
+}

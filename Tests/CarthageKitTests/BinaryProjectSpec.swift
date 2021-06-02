@@ -1,6 +1,7 @@
 import Foundation
 import Nimble
 import Quick
+import Tentacle
 
 @testable import CarthageKit
 
@@ -94,5 +95,56 @@ class BinaryProjectSpec: QuickSpec {
 				expect(actualBinaryProject) == expectedBinaryProject
 			}
 		}
+
+		describe("binaryAssetFilter") {
+			enum A {
+				static let framework = URL(string: "https://example.com/A.framework.zip")!
+				static let xcframework = URL(string: "https://example.com/A.xcframework.zip")!
+			}
+			enum B {
+				static let framework = URL(string: "https://example.com/B.framework.zip")!
+				static let xcframework = URL(string: "https://example.com/B.xcframework.zip")!
+			}
+			enum GitHubA {
+				static let framework = Release.Asset(id: 1, name: "C.framework.zip", contentType: "application/zip", url: A.framework, apiURL: URL(string: "https://api.example.com")!)
+				static let xcframework = Release.Asset(id: 1, name: "C.xcframework.zip", contentType: "application/zip", url: A.xcframework, apiURL: URL(string: "https://api.example.com")!)
+			}
+
+			it("prefers an xcframework when --use-xcframeworks is passed") {
+				let prioritization = binaryAssetFilter(prioritizing: [A.xcframework, A.framework], preferXCFrameworks: true)
+				expect(prioritization) == [A.xcframework]
+
+				let githubPrioritization = binaryAssetFilter(prioritizing: [GitHubA.xcframework, GitHubA.framework], preferXCFrameworks: true)
+				expect(githubPrioritization) == [GitHubA.xcframework]
+			}
+
+			it("prefers a framework without --use-xcframeworks") {
+				let prioritization = binaryAssetFilter(prioritizing: [A.xcframework, A.framework], preferXCFrameworks: false)
+				expect(prioritization) == [A.framework]
+
+				let githubPrioritization = binaryAssetFilter(prioritizing: [GitHubA.xcframework, GitHubA.framework], preferXCFrameworks: false)
+				expect(githubPrioritization) == [GitHubA.framework]
+			}
+
+			it("falls back to a framework") {
+				let prioritization = binaryAssetFilter(prioritizing: [A.framework], preferXCFrameworks: true)
+				expect(prioritization) == [A.framework]
+			}
+
+			it("falls back to an xcframwork for binary assets only") {
+				let prioritization = binaryAssetFilter(prioritizing: [A.xcframework, B.framework], preferXCFrameworks: false)
+				expect(prioritization) == [A.xcframework, B.framework]
+
+				let githubPrioritization = binaryAssetFilter(prioritizing: [GitHubA.xcframework], preferXCFrameworks: false)
+				expect(githubPrioritization) == []
+			}
+
+			it("falls back to a framework even if other assets are xcframeworks") {
+				let prioritization = binaryAssetFilter(prioritizing: [A.xcframework, A.framework, B.framework], preferXCFrameworks: true)
+				expect(prioritization) == [A.xcframework, B.framework]
+			}
+		}
 	}
 }
+
+
