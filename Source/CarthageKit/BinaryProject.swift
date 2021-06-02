@@ -31,7 +31,7 @@ public struct BinaryProject: Equatable {
 						var urlStrings: [String] = []
 					}
 					let extractedURLs = components.queryItems?.reduce(into: ExtractedURLs()) { state, item in
-						if item.name == "alt", let value = item.value {
+						if item.name == "carthage-alt", let value = item.value {
 							state.urlStrings.append(value)
 						} else if state.remainingQueryItems == nil {
 							state.remainingQueryItems = [item]
