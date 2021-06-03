@@ -1712,9 +1712,9 @@ extension URL: AssetNameConvertible {
 
 	// Binary dependencies must pick an XCFramework if it's the only asset available. Otherwise, Carthage will download
 	// nothing unless --use-xcframeworks is passed.
-	static var skipsUnwantedXCFrameworks: Bool { false }
+	static var skipsUnwantedXCFrameworks: Bool { return false }
 }
 extension Release.Asset: AssetNameConvertible {
 	// GitHub releases should skip downloading and fall back to building from source if only an XCFramework is available.
-	static var skipsUnwantedXCFrameworks: Bool { true }
+	static var skipsUnwantedXCFrameworks: Bool { return true }
 }
