@@ -14,7 +14,8 @@ class BinaryProjectSpec: QuickSpec {
 					"\"1.0.1\": \"https://my.domain.com/release/1.0.1/framework.zip?alt=https://my.domain.com/release/1.0.1/xcframework.zip&alt=https://my.domain.com/some/other/alternate.zip\"," +
 					"\"1.0.2\": \"https://my.domain.com/release/1.0.2/framework.zip?alt=https%3A%2F%2Fmy.domain.com%2Frelease%2F1.0.2%2Fxcframework.zip\"," +
                     "\"1.0.3\": \"https://my.domain.com/release/1.0.3/framework.zip?alt=media\"," +
-                    "\"1.0.4\": \"https://my.domain.com/release/1.0.4/framework.zip?carthage-alt=https://my.domain.com/release/1.0.4/xcframework.zip&carthage-alt=https://my.domain.com/some/other/alternate.zip\"" +
+                    "\"1.0.4\": \"https://my.domain.com/release/1.0.4/framework.zip?carthage-alt=https://my.domain.com/release/1.0.4/xcframework.zip&carthage-alt=https://my.domain.com/some/other/alternate.zip\"," +
+                    "\"1.0.5\": \"https://my.domain.com/release/1.0.5/framework.zip?carthage-alt=https://my.domain.com/release/1.0.5/xcframework.zip&alt=https://my.domain.com/some/other/alternate.zip&alt=media\"" +
 					"}"
 					).data(using: .utf8)!
 
@@ -37,6 +38,11 @@ class BinaryProjectSpec: QuickSpec {
                     PinnedVersion("1.0.4"): [
                         URL(string: "https://my.domain.com/release/1.0.4/framework.zip")!,
                         URL(string: "https://my.domain.com/release/1.0.4/xcframework.zip")!,
+                        URL(string: "https://my.domain.com/some/other/alternate.zip")!,
+                    ],
+                    PinnedVersion("1.0.5"): [
+                        URL(string: "https://my.domain.com/release/1.0.5/framework.zip?alt=media")!,
+                        URL(string: "https://my.domain.com/release/1.0.5/xcframework.zip")!,
                         URL(string: "https://my.domain.com/some/other/alternate.zip")!,
                     ],
 				])
