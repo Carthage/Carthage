@@ -12,7 +12,9 @@ class BinaryProjectSpec: QuickSpec {
 					"{" +
 					"\"1.0\": \"https://my.domain.com/release/1.0.0/framework.zip\"," +
 					"\"1.0.1\": \"https://my.domain.com/release/1.0.1/framework.zip?alt=https://my.domain.com/release/1.0.1/xcframework.zip&alt=https://my.domain.com/some/other/alternate.zip\"," +
-					"\"1.0.2\": \"https://my.domain.com/release/1.0.2/framework.zip?alt=https%3A%2F%2Fmy.domain.com%2Frelease%2F1.0.2%2Fxcframework.zip\"" +
+					"\"1.0.2\": \"https://my.domain.com/release/1.0.2/framework.zip?alt=https%3A%2F%2Fmy.domain.com%2Frelease%2F1.0.2%2Fxcframework.zip\"," +
+                    "\"1.0.3\": \"https://my.domain.com/release/1.0.3/framework.zip?alt=media\"," +
+                    "\"1.0.4\": \"https://my.domain.com/release/1.0.4/framework.zip?carthage-alt=https://my.domain.com/release/1.0.4/xcframework.zip&carthage-alt=https://my.domain.com/some/other/alternate.zip\"" +
 					"}"
 					).data(using: .utf8)!
 
@@ -29,6 +31,14 @@ class BinaryProjectSpec: QuickSpec {
 						URL(string: "https://my.domain.com/release/1.0.2/framework.zip")!,
 						URL(string: "https://my.domain.com/release/1.0.2/xcframework.zip")!
 					],
+                    PinnedVersion("1.0.3"): [
+                        URL(string: "https://my.domain.com/release/1.0.3/framework.zip?alt=media")!
+                    ],
+                    PinnedVersion("1.0.4"): [
+                        URL(string: "https://my.domain.com/release/1.0.4/framework.zip")!,
+                        URL(string: "https://my.domain.com/release/1.0.4/xcframework.zip")!,
+                        URL(string: "https://my.domain.com/some/other/alternate.zip")!,
+                    ],
 				])
 
 				expect(actualBinaryProject) == expectedBinaryProject
@@ -93,6 +103,32 @@ class BinaryProjectSpec: QuickSpec {
 
 				expect(actualBinaryProject) == expectedBinaryProject
 			}
+            
+            it("should be a valid binary url") {
+                let urls = [
+                    "file:///my/domain/com/framework.zip",
+                    "http://my.domain.com/framework.zip",
+                    "my.domain.com/release/1.0.0/framework.zip"
+                ]
+                
+                let actualValidity: [Bool] = urls.reduce([], { result, value in result + [BinaryProject.isValidBinaryUrl(value: value)] })
+                let expectedValidity: [Bool] = urls.reduce([], { result, _ in result + [true] })
+                
+                expect(actualValidity) == expectedValidity
+            }
+            
+            it("should not be a valid binary url") {
+                let urls = [
+                    "media",
+                    "💩",
+                    "some.value"
+                ]
+                
+                let actualValidity: [Bool] = urls.reduce([], { result, value in result + [BinaryProject.isValidBinaryUrl(value: value)] })
+                let expectedValidity: [Bool] = urls.reduce([], { result, _ in result + [false] })
+                
+                expect(actualValidity) == expectedValidity
+            }
 		}
 	}
 }

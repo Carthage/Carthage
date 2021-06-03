@@ -33,7 +33,9 @@ public struct BinaryProject: Equatable {
 					let extractedURLs = components.queryItems?.reduce(into: ExtractedURLs()) { state, item in
 						if item.name == "carthage-alt", let value = item.value {
 							state.urlStrings.append(value)
-						} else if state.remainingQueryItems == nil {
+                        } else if item.name == "alt", let value = item.value, isValidBinaryUrl(value: value) {
+                            state.urlStrings.append(value)
+                        } else if state.remainingQueryItems == nil {
 							state.remainingQueryItems = [item]
 						} else {
 							state.remainingQueryItems!.append(item)
@@ -67,4 +69,12 @@ public struct BinaryProject: Equatable {
 				return .success(BinaryProject(versions: versions))
 			}
 	}
+    
+    public static func isValidBinaryUrl(value: String) -> Bool {
+        let detector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        let matches = detector.matches(in: value, options: [], range: NSRange(location: 0, length: value.utf16.count))
+        let match = matches.first(where: { Range($0.range, in: value) != nil })
+        
+        return match != nil
+    }
 }
