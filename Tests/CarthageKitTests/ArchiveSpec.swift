@@ -35,7 +35,7 @@ class ArchiveSpec: QuickSpec {
 			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
-				expect { try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				expect(expression: {try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true, attributes: nil) }).notTo(throwError())
 				expect(FileManager.default.changeCurrentDirectoryPath(temporaryURL.path)) == true
 				return
 			}
@@ -48,13 +48,13 @@ class ArchiveSpec: QuickSpec {
 
 			it("should zip relative paths into an archive") {
 				let subdirPath = "subdir"
-				expect { try FileManager.default.createDirectory(atPath: subdirPath, withIntermediateDirectories: true) }.notTo(throwError())
+				expect(expression: { try FileManager.default.createDirectory(atPath: subdirPath, withIntermediateDirectories: true) }).notTo(throwError())
 
 				let innerFilePath = (subdirPath as NSString).appendingPathComponent("inner")
-				expect { try "foobar".write(toFile: innerFilePath, atomically: true, encoding: .utf8) }.notTo(throwError())
+				expect(expression: { try "foobar".write(toFile: innerFilePath, atomically: true, encoding: .utf8) }).notTo(throwError())
 
 				let outerFilePath = "outer"
-				expect { try "foobar".write(toFile: outerFilePath, atomically: true, encoding: .utf8) }.notTo(throwError())
+				expect(expression: { try "foobar".write(toFile: outerFilePath, atomically: true, encoding: .utf8) }).notTo(throwError())
 
 				let result = zip(paths: [ innerFilePath, outerFilePath ], into: archiveURL, workingDirectory: temporaryURL.path).wait()
 				expect(result.error).to(beNil())
@@ -81,11 +81,11 @@ class ArchiveSpec: QuickSpec {
 
 			it("should preserve symlinks") {
 				let destinationPath = "symlink-destination"
-				expect { try "foobar".write(toFile: destinationPath, atomically: true, encoding: .utf8) }.notTo(throwError())
+				expect(expression: { try "foobar".write(toFile: destinationPath, atomically: true, encoding: .utf8) }).notTo(throwError())
 
 				let symlinkPath = "symlink"
-				expect { try FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
-				expect { try FileManager.default.destinationOfSymbolicLink(atPath: symlinkPath) } == destinationPath
+				expect(expression: { try FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath)}).notTo(throwError())
+				expect(expression: { try FileManager.default.destinationOfSymbolicLink(atPath: symlinkPath)}) == destinationPath
 
 				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.path).wait()
 				expect(result.error).to(beNil())
@@ -96,7 +96,7 @@ class ArchiveSpec: QuickSpec {
 
 				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).appendingPathComponent(symlinkPath)
 				expect(FileManager.default.fileExists(atPath: unzippedSymlinkURL.path)) == true
-				expect { try FileManager.default.destinationOfSymbolicLink(atPath: unzippedSymlinkURL.path) } == destinationPath
+				expect(expression: { try FileManager.default.destinationOfSymbolicLink(atPath: unzippedSymlinkURL.path) }) == destinationPath
 			}
 		}
 	}

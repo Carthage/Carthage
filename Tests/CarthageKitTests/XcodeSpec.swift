@@ -21,7 +21,9 @@ class XcodeSpec: QuickSpec {
 
 		beforeEach {
 			_ = try? FileManager.default.removeItem(at: buildFolderURL)
-			expect { try FileManager.default.createDirectory(atPath: targetFolderURL.path, withIntermediateDirectories: true) }.notTo(throwError())
+			expect(expression: {
+				try FileManager.default.createDirectory(atPath: targetFolderURL.path, withIntermediateDirectories: true)
+			}).notTo(throwError())
 		}
 
 		afterEach {
@@ -162,7 +164,7 @@ class XcodeSpec: QuickSpec {
 			let version = PinnedVersion("0.1")
 
 			for dependency in dependencies {
-				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", validSimulatorArchs: "i386 x86_64"))
 					.ignoreTaskData()
 					.on(value: { project, scheme in // swiftlint:disable:this end_closure
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -172,7 +174,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug", validSimulatorArchs: "i386 x86_64"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -269,7 +271,7 @@ class XcodeSpec: QuickSpec {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", validSimulatorArchs: "i386 x86_64"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -295,7 +297,7 @@ class XcodeSpec: QuickSpec {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", validSimulatorArchs: "i386 x86_64"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")

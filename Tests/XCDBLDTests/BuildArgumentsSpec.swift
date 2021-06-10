@@ -98,6 +98,12 @@ class BuildArgumentsSpec: QuickSpec {
 					subject.onlyActiveArchitecture = false
 				}
 			}
+
+			describe("specifying validArchs") {
+				itCreatesBuildArguments("includes VALID_ARCHS if given", arguments: ["VALID_ARCHS=x86_64 i386"]) { subject in
+					subject.validArchs = "x86_64 i386"
+				}
+			}
 		}
 	}
 }

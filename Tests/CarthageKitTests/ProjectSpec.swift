@@ -21,7 +21,7 @@ class ProjectSpec: QuickSpec {
 
 			func build(directoryURL url: URL, platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: url)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds, validSimulatorArchs: "i386 x86_64"), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -355,7 +355,9 @@ class ProjectSpec: QuickSpec {
 			let dependency = Dependency.git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
-				expect { try FileManager.default.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
+				expect(expression: {
+					try FileManager.default.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true)
+				}).notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -385,7 +387,9 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
+				expect(expression: {
+					try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true)
+				}).notTo(throwError())
 				initRepository()
 			}
 
