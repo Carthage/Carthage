@@ -604,13 +604,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// will be found. Depends on the location of the current project.
 	private func frameworkURLInCarthageBuildFolder(
 		forSDK sdk: SDK,
-		frameworkNameAndExtension: String
+		frameworkNameAndExtension: String,
+		frameworkType: FrameworkType
 	) -> Result<URL, CarthageError> {
-		guard let destinationURLInWorkingDir = sdk
-			.relativeURL?
-			.appendingPathComponent(frameworkNameAndExtension, isDirectory: true) else {
+		guard let sdkFolder = sdk.relativeURL else {
 				return .failure(.internalError(description: "failed to construct framework destination url from \(sdk.platformSimulatorlessFromHeuristic) and \(frameworkNameAndExtension)"))
 		}
+
+		let buildFolder = frameworkType == .static
+			? sdkFolder.appendingPathComponent(FrameworkType.staticFolderName)
+			: sdkFolder
+		let destinationURLInWorkingDir = buildFolder.appendingPathComponent(frameworkNameAndExtension, isDirectory: true)
 
 		return .success(self
 			.directoryURL
@@ -728,7 +732,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			default:
 				return platformForFramework(url)
 					.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
-																		 frameworkNameAndExtension: url.lastPathComponent) }
+																		 frameworkNameAndExtension: url.lastPathComponent,
+																		 frameworkType: $1) }
 		}
 	}
 
@@ -771,13 +776,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
 				}
 				.flatMap(.concat) { self.removeItem(at: $0) }
-				.map { true }
+				.collect()
+				.map { !$0.isEmpty }
 				.flatMapError { error in
 					self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: dependency, error: error))
 					return SignalProducer(value: false)
 				}
-				.concat(value: false)
-				.take(first: 1)
 
 		case .git, .binary:
 			return SignalProducer(value: false)
@@ -1413,12 +1417,21 @@ private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = n
 }
 
 /// Sends the platform specified in the given Info.plist.
-func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageError> {
+func platformForFramework(_ frameworkURL: URL) -> SignalProducer<(SDK, FrameworkType), CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
-		.attemptMap { url -> Result<String, CarthageError> in
+		.attemptMap { url -> Result<(String, FrameworkType), CarthageError> in
 			let bundle = Bundle(url: url)
+
+			let otool = bundle?.executableURL.map { executableURL in
+				Task("/usr/bin/xcrun", arguments: ["otool", "-lv", executableURL.path])
+					.launch(standardInput: nil)
+					.ignoreTaskData()
+					.map { String(data: $0, encoding: .utf8) ?? "" }
+					.filter { !$0.isEmpty }
+					.replayLazily(upTo: 1)
+			}
 
 			func readFailed(_ message: String) -> CarthageError {
 				let error = Result<(), NSError>.error(message)
@@ -1426,16 +1439,11 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 			}
 
 			func sdkNameFromExecutable() -> String? {
-				guard let executableURL = bundle?.executableURL else {
+				guard let otool = otool else {
 					return nil
 				}
 
-				let task = Task("/usr/bin/xcrun", arguments: ["otool", "-lv", executableURL.path])
-
-				let sdkName: String? = task.launch(standardInput: nil)
-					.ignoreTaskData()
-					.map { String(data: $0, encoding: .utf8) ?? "" }
-					.filter { !$0.isEmpty }
+				let sdkName: String? = otool
 					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
 						output.linesProducer
 					}
@@ -1456,6 +1464,20 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 				return sdkName
 			}
 
+			func frameworkTypeFromExecutable() -> FrameworkType? {
+				guard let otool = otool else {
+					return nil
+				}
+
+				return otool.map { output in
+					output.starts(with: "Archive :") ? .static : .dynamic
+				}
+				.single()?
+				.value
+			}
+
+			let frameworkType = frameworkTypeFromExecutable() ?? .dynamic
+
 			// Try to read what platfrom this binary is for. Attempt in order:
 			// 1. Read `DTSDKName` from Info.plist.
 			//    Some users are reporting that static frameworks don't have this key in the .plist,
@@ -1463,17 +1485,17 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 			// 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
 
 			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
-				return .success(sdkNameFromBundle)
+				return .success((sdkNameFromBundle, frameworkType))
 			} else if let sdkNameFromExecutable = sdkNameFromExecutable() {
-				return .success(sdkNameFromExecutable)
+				return .success((sdkNameFromExecutable, frameworkType))
 			} else {
 				return .failure(readFailed("could not determine platform neither from DTSDKName key in plist nor from the framework's executable"))
 			}
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
-		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
-		.map { SDK(name: $0, simulatorHeuristic: "") }
+		.map { sdkName, type in (sdkName.trimmingCharacters(in: CharacterSet.letters.inverted), type) }
+		.map { (SDK(name: $0, simulatorHeuristic: ""), $1) }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
