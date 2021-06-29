@@ -55,3 +55,7 @@ echo 'EXCLUDED_ARCHS = $(inherited) $(EXCLUDED_ARCHS__EFFECTIVE_PLATFORM_SUFFIX_
 export XCODE_XCCONFIG_FILE="$xcconfig"
 carthage "$@"
 ```
+
+### Github action
+
+To simplify you GitHub actions flow, you can use [dedicated Github action](https://github.com/marketplace/actions/carthage-workaround) that will use the script above.
