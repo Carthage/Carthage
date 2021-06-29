@@ -11,16 +11,14 @@ import Result
 /// - parameter platformName: If given, only sends bundles from an XCFramework with a matching `SupportedPlatform`.
 /// - parameter variant: If given along with `platformName`, only sends bundles from an XCFramework with a matching `SupportedPlatformVariant`.
 public func frameworkBundlesInURL(_ url: URL, compatibleWith platformName: String? = nil, variant: String? = nil) -> SignalProducer<Bundle, DecodingError> {
-	guard let bundle = Bundle(url: url) else {
-		return .empty
-	}
-
-	switch bundle.object(forInfoDictionaryKey: "CFBundlePackageType") as? String {
-	case "XFWK":
+	switch url.pathExtension {
+	case "xcframework":
 		let decoder = PropertyListDecoder()
-		let infoData = bundle.infoDictionary.flatMap({ try? PropertyListSerialization.data(fromPropertyList: $0, format: .binary, options: 0) }) ?? Data()
-		let xcframework = Result<XCFramework, DecodingError>(catching: { try decoder.decode(XCFramework.self, from: infoData) })
-		return SignalProducer(result: xcframework)
+
+		return SignalProducer(value: url.appendingPathComponent("Info.plist"))
+			.attemptMap { try Data(contentsOf: $0) }
+			.attemptMap { try decoder.decode(XCFramework.self, from: $0) }
+			.mapError { $0.error as? DecodingError ?? .dataCorrupted(.init(codingPath: [], debugDescription: $0.description)) }
 			.map({ $0.availableLibraries }).flatten()
 			.filter { library in
 				guard let platformName = platformName else { return true }
@@ -28,8 +26,9 @@ public func frameworkBundlesInURL(_ url: URL, compatibleWith platformName: Strin
 			}
 			.map({ Bundle(url: url.appendingPathComponent($0.identifier).appendingPathComponent($0.path)) })
 			.skipNil()
-	default: // Typically "FMWK" but not required
-		return SignalProducer(value: bundle)
+	default:
+		return SignalProducer(value: Bundle(url: url))
+			.skipNil()
 	}
 }
 
