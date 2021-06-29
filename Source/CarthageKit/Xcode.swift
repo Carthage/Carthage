@@ -208,7 +208,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
 			.locate(in: directoryURL)
-			.flatMap(.concurrent(limit: 4)) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
+			.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
 				return project
 					.schemes()
 					.collect()
@@ -222,6 +222,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 					.map { (project, $0) }
 			}
 			.replayLazily(upTo: Int.max)
+
 	return locator
 		.collect()
 		// Allow dependencies which have no projects, not to error out with
@@ -240,14 +241,21 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 				.map { _ in (scheme, project) }
 		}
 		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			var rootLevel: Int?
+
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
 				.start(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
 				// Pick up the first workspace which can build the scheme.
 				.flatMap(.concat) { project, schemes -> SignalProducer<ProjectLocator, CarthageError> in
+					// The locator is sorted by level, so the first project is the root level
+					if rootLevel == nil {
+						rootLevel = project.level
+					}
+
 					switch project {
-					case .workspace where schemes.contains(scheme):
+					case .workspace where schemes.contains(scheme) && project.level == rootLevel:
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 						return shouldBuildScheme(buildArguments, platformAllowList)
 							.filter { $0 }
