@@ -53,6 +53,10 @@ public struct BuildArguments {
 	/// the native architecture.
 	public var onlyActiveArchitecture: Bool?
 
+	/// The build setting whether the product should exclude some particular archs.
+	/// Primarily used for excluding arm64 architecture from iOS Simulator target
+	public var validArchs: String?
+
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
@@ -129,6 +133,10 @@ public struct BuildArguments {
 			} else {
 				args += [ "ONLY_ACTIVE_ARCH=NO" ]
 			}
+		}
+
+		if let validArchs = validArchs {
+			args += ["VALID_ARCHS=\(validArchs)"]
 		}
 
 		// Disable code signing requirement for all builds

@@ -739,7 +739,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					fatalError("Could not find simulator SDK in \(sdks)")
 				}
 
-				return settingsByTarget(build(sdk: deviceSDK, with: buildArgs, in: workingDirectoryURL))
+				let buildForDeviceArgs = buildArgs
+				var buildForSimulatorArgs = buildArgs
+				buildForSimulatorArgs.validArchs = options.validSimulatorArchs
+
+				return settingsByTarget(build(sdk: deviceSDK, with: buildForDeviceArgs, in: workingDirectoryURL))
 					.flatMap(.concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
 						case let .launch(task):
@@ -754,7 +758,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						case let .success(deviceSettingsByTarget):
 							return settingsByTarget(
 								build(sdk: simulatorSDK,
-									  with: buildArgs,
+									  with: buildForSimulatorArgs,
 									  in: workingDirectoryURL)
 								)
 								.flatMapTaskEvents(.concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
