@@ -3,6 +3,18 @@ import ReactiveSwift
 import ReactiveTask
 import Result
 
+/// Private CoreFoundation call which flushes cached metadata for bundle objects.
+///
+/// https://michelf.ca/blog/2010/killer-private-eraser/
+/// https://opensource.apple.com/source/CF/CF-550.13/CFBundlePriv.h
+private let _CFBundleFlushBundleCaches: ((CFBundle) -> Void)? = {
+	let sym = dlsym(
+		UnsafeMutableRawPointer(bitPattern: -3), // RTLD_SELF
+		"_CFBundleFlushBundleCaches"
+	)
+	return unsafeBitCast(sym, to: (@convention(c) (CFBundle) -> Void)?.self)
+}()
+
 /// Loads a bundle directory from a given URL and sends Bundle objects for each framework in it.
 ///
 /// If `url` is an XCFramework, sends a Bundle for each embedded framework bundle.
@@ -11,14 +23,22 @@ import Result
 /// - parameter platformName: If given, only sends bundles from an XCFramework with a matching `SupportedPlatform`.
 /// - parameter variant: If given along with `platformName`, only sends bundles from an XCFramework with a matching `SupportedPlatformVariant`.
 public func frameworkBundlesInURL(_ url: URL, compatibleWith platformName: String? = nil, variant: String? = nil) -> SignalProducer<Bundle, DecodingError> {
-	switch url.pathExtension {
-	case "xcframework":
-		let decoder = PropertyListDecoder()
+	guard let bundle = Bundle(url: url) else {
+		return .empty
+	}
 
-		return SignalProducer(value: url.appendingPathComponent("Info.plist"))
-			.attemptMap { try Data(contentsOf: $0) }
-			.attemptMap { try decoder.decode(XCFramework.self, from: $0) }
-			.mapError { $0.error as? DecodingError ?? .dataCorrupted(.init(codingPath: [], debugDescription: $0.description)) }
+	// Flush the Info.plist cache for this bundle. It may have been updated by mergeIntoXCFramework(in:settings:)
+	// since the last time it was loaded.
+	let cfbundle = CFBundleCreate(nil, bundle.bundleURL as CFURL)!
+	assert(_CFBundleFlushBundleCaches != nil, "_CFBundleFlushBundleCaches not loaded, it is not available on this OS?")
+	_CFBundleFlushBundleCaches?(cfbundle)
+
+	switch bundle.object(forInfoDictionaryKey: "CFBundlePackageType") as? String {
+	case "XFWK":
+		let decoder = PropertyListDecoder()
+		let infoData = bundle.infoDictionary.flatMap({ try? PropertyListSerialization.data(fromPropertyList: $0, format: .binary, options: 0) }) ?? Data()
+		let xcframework = Result<XCFramework, DecodingError>(catching: { try decoder.decode(XCFramework.self, from: infoData) })
+		return SignalProducer(result: xcframework)
 			.map({ $0.availableLibraries }).flatten()
 			.filter { library in
 				guard let platformName = platformName else { return true }
@@ -26,9 +46,8 @@ public func frameworkBundlesInURL(_ url: URL, compatibleWith platformName: Strin
 			}
 			.map({ Bundle(url: url.appendingPathComponent($0.identifier).appendingPathComponent($0.path)) })
 			.skipNil()
-	default:
-		return SignalProducer(value: Bundle(url: url))
-			.skipNil()
+	default: // Typically "FMWK" but not required
+		return SignalProducer(value: bundle)
 	}
 }
 
