@@ -102,3 +102,9 @@ custom_rules:
     name: "Carthage Typo"
     message: "Found a possible Carthage typo"
     severity: warning
+  carthage_typo:
+    included: ".*\\.(swift|md)"
+    regex: "(Carhage|Cartage)"
+    name: "Carthage Typo"
+    message: "Found a possible Carthage typo"
+    severity: warning
