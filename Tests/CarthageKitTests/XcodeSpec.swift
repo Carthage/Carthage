@@ -162,7 +162,7 @@ class XcodeSpec: QuickSpec {
 			let version = PinnedVersion("0.1")
 
 			for dependency in dependencies {
-				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"), skipSchemes: [])
 					.ignoreTaskData()
 					.on(value: { project, scheme in // swiftlint:disable:this end_closure
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -172,7 +172,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -269,7 +269,7 @@ class XcodeSpec: QuickSpec {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -295,7 +295,7 @@ class XcodeSpec: QuickSpec {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -312,10 +312,42 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
+		it("should skip the expected schemes") {
+			let dependency = "SchemeDiscoverySampleForCarthage"
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
+
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL, skipSchemes: ["SchemeDiscoverySampleForCarthage-iOS"])
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error).to(beNil())
+
+			let expectedPlatformsFrameworks = [
+				("Mac", "SchemeDiscoverySampleForCarthage"),
+			]
+
+			let expectedSkippedFrameworks = [
+				("iOS", "SchemeDiscoverySampleForCarthage"),
+			]
+
+			for (platform, framework) in expectedPlatformsFrameworks {
+				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
+				expect(path).to(beExistingDirectory())
+			}
+
+			for (platform, framework) in expectedSkippedFrameworks {
+				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
+				expect(path).toNot(beExistingDirectory())
+			}
+		}
+
 		it("should not copy build products from nested dependencies produced by workspace") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -333,7 +365,7 @@ class XcodeSpec: QuickSpec {
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -356,7 +388,7 @@ class XcodeSpec: QuickSpec {
 		it("should build for one platform") {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]), skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -382,7 +414,7 @@ class XcodeSpec: QuickSpec {
 		it("should build for multiple platforms") {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]), skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -428,7 +460,7 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
 																				   platforms: [.iOS],
-																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
+																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -449,7 +481,7 @@ class XcodeSpec: QuickSpec {
 
 			let result2 = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
 																					platforms: [.iOS],
-																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
+																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL, skipSchemes: [])
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")

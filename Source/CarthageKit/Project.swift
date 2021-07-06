@@ -1146,6 +1146,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions( // swiftlint:disable:this cyclomatic_complexity function_body_length
 		_ options: BuildOptions,
+		skipSchemes: [String],
 		dependenciesToBuild: [String]? = nil,
 		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 	) -> BuildSchemeProducer {
@@ -1232,7 +1233,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
-					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
+					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, skipSchemes: skipSchemes, sdkFilter: sdkFilter))
 					.flatMapError { error -> BuildSchemeProducer in
 						switch error {
 						case .noSharedFrameworkSchemes:
