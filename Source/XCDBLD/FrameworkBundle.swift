@@ -3,18 +3,6 @@ import ReactiveSwift
 import ReactiveTask
 import Result
 
-/// Private CoreFoundation call which flushes cached metadata for bundle objects.
-///
-/// https://michelf.ca/blog/2010/killer-private-eraser/
-/// https://opensource.apple.com/source/CF/CF-550.13/CFBundlePriv.h
-private let _CFBundleFlushBundleCaches: ((CFBundle) -> Void)? = {
-	let sym = dlsym(
-		UnsafeMutableRawPointer(bitPattern: -3), // RTLD_SELF
-		"_CFBundleFlushBundleCaches"
-	)
-	return unsafeBitCast(sym, to: (@convention(c) (CFBundle) -> Void)?.self)
-}()
-
 /// Loads a bundle directory from a given URL and sends Bundle objects for each framework in it.
 ///
 /// If `url` is an XCFramework, sends a Bundle for each embedded framework bundle.
@@ -26,12 +14,6 @@ public func frameworkBundlesInURL(_ url: URL, compatibleWith platformName: Strin
 	guard let bundle = Bundle(url: url) else {
 		return .empty
 	}
-
-	// Flush the Info.plist cache for this bundle. It may have been updated by mergeIntoXCFramework(in:settings:)
-	// since the last time it was loaded.
-	let cfbundle = CFBundleCreate(nil, bundle.bundleURL as CFURL)!
-	assert(_CFBundleFlushBundleCaches != nil, "_CFBundleFlushBundleCaches not loaded, it is not available on this OS?")
-	_CFBundleFlushBundleCaches?(cfbundle)
 
 	switch bundle.object(forInfoDictionaryKey: "CFBundlePackageType") as? String {
 	case "XFWK":
