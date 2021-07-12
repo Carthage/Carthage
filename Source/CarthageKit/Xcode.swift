@@ -221,6 +221,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 					}
 					.map { (project, $0) }
 			}
+			.collect()
+			// Send project-scheme pairs in ProjectLocator priority order, not the random order the projects were loaded in.
+			.map { pairs in pairs.sorted(by: { $0.0 < $1.0 }) }
+			.flatten()
 			.replayLazily(upTo: Int.max)
 	return locator
 		.collect()
