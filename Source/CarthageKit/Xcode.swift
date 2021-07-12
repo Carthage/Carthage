@@ -604,6 +604,20 @@ private func mergeBuildProducts(
 		}
 }
 
+/// Private CoreFoundation call which flushes cached metadata for bundle objects.
+///
+/// https://michelf.ca/blog/2010/killer-private-eraser/
+/// https://opensource.apple.com/source/CF/CF-550.13/CFBundlePriv.h
+private let _CFBundleFlushBundleCaches: ((CFBundle) -> Void)? = {
+	let sym = dlsym(
+		UnsafeMutableRawPointer(bitPattern: -3), // RTLD_SELF
+		"_CFBundleFlushBundleCaches"
+	)
+	let fn = unsafeBitCast(sym, to: (@convention(c) (CFBundle) -> Void)?.self)
+	assert(fn != nil, "_CFBundleFlushBundleCaches not loaded, it is not available on this OS?")
+	return fn
+}()
+
 /// Extracts the built product and debug information from a build described by `settings` and adds it to an xcframework
 /// in `directoryURL`. Sends the xcframework's URL when complete.
 private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
@@ -652,6 +666,10 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings)
 				}
 				try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 				try fileManager.copyItem(at: replacementURL, to: url)
+
+				// Flush the Info.plist cache for this bundle.
+				let cfbundle = CFBundleCreate(nil, url as CFURL)!
+				_CFBundleFlushBundleCaches?(cfbundle)
 			}.flatMap { _ in
 				Result(at: temporaryDirectory) { try fileManager.removeItem(at: $0) }
 			}
