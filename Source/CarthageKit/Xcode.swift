@@ -608,7 +608,8 @@ private func mergeBuildProducts(
 /// in `directoryURL`. Sends the xcframework's URL when complete.
 private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
 	let xcframework = SignalProducer(result: settings.productName).map { productName in
-		directoryURL.appendingPathComponent(productName).appendingPathExtension("xcframework")
+		return settings.productDestinationPath(in: directoryURL)
+			.appendingPathComponent(productName).appendingPathExtension("xcframework")
 	}
 	let framework = SignalProducer(result: settings.wrapperURL.map({ $0.resolvingSymlinksInPath() }))
 

@@ -32,21 +32,19 @@ public struct CachedFramework: Codable {
 
 	/// The framework's expected location within a platform directory.
 	func location(in buildDirectory: URL, sdk: SDK) -> URL {
+		var result = buildDirectory
+		if container == nil || libraryIdentifier == nil {
+			result.appendPathComponent(sdk.platformSimulatorlessFromHeuristic)
+		}
+		if linking == .static {
+			result.appendPathComponent(FrameworkType.staticFolderName)
+		}
 		if let container = container, let libraryIdentifier = libraryIdentifier {
-			return buildDirectory
-				.appendingPathComponent(container)
-				.appendingPathComponent(libraryIdentifier)
-				.appendingPathComponent("\(name).framework")
+			result.appendPathComponent(container)
+			result.appendPathComponent(libraryIdentifier)
 		}
-		let platformDirectory = buildDirectory.appendingPathComponent(sdk.platformSimulatorlessFromHeuristic)
-		switch linking {
-		case .some(.static):
-			return platformDirectory
-				.appendingPathComponent(FrameworkType.staticFolderName)
-				.appendingPathComponent("\(name).framework")
-		default:
-			return platformDirectory.appendingPathComponent("\(name).framework")
-		}
+		result.appendPathComponent("\(name).framework")
+		return result
 	}
 }
 
@@ -483,7 +481,7 @@ public func createVersionFileForCommitish(
 		let frameworkSwiftVersion: String?
 	}
 	enum FrameworkLocator {
-		case xcframework(name: String, libraryIdentifier: String)
+		case xcframework(name: String, libraryIdentifier: String, linking: FrameworkType)
 		case platformDirectory(name: String, linking: FrameworkType)
 	}
 
@@ -499,17 +497,21 @@ public func createVersionFileForCommitish(
 				let frameworkName: String
 				let frameworkLocator: FrameworkLocator
 				switch (
+					url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
 					url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
 					url.deletingLastPathComponent().lastPathComponent,
 					url.deletingPathExtension().lastPathComponent
 				) {
-				case (containerURL.lastPathComponent, let libraryIdentifier, let name):
+				case (FrameworkType.staticFolderName, containerURL.lastPathComponent, let libraryIdentifier, let name):
 					frameworkName = name
-					frameworkLocator = .xcframework(name: containerURL.lastPathComponent, libraryIdentifier: libraryIdentifier)
-				case (let platform, FrameworkType.staticFolderName, let name):
+					frameworkLocator = .xcframework(name: containerURL.lastPathComponent, libraryIdentifier: libraryIdentifier, linking: .static)
+				case (_, containerURL.lastPathComponent, let libraryIdentifier, let name):
+					frameworkName = name
+					frameworkLocator = .xcframework(name: containerURL.lastPathComponent, libraryIdentifier: libraryIdentifier, linking: .dynamic)
+				case (_, let platform, FrameworkType.staticFolderName, let name):
 					frameworkName = name
 					frameworkLocator = .platformDirectory(name: platform, linking: .static)
-				case (_, let platform, let name):
+				case (_, _, let platform, let name):
 					frameworkName = name
 					frameworkLocator = .platformDirectory(name: platform, linking: .dynamic)
 				}
@@ -539,10 +541,10 @@ public func createVersionFileForCommitish(
 				case .platformDirectory(name: let name, linking: let linking):
 					platformName = name
 					cachedFramework = CachedFramework(name: frameworkName, container: nil, libraryIdentifier: nil, hash: hash, linking: linking, swiftToolchainVersion: frameworkSwiftVersion)
-				case .xcframework(name: let container, libraryIdentifier: let identifier):
+				case .xcframework(name: let container, libraryIdentifier: let identifier, let linking):
 					let targetOS = identifier.components(separatedBy: "-")[0]
 					platformName = SDK.associatedSetOfKnownIn2019YearSDKs(targetOS).first?.platformSimulatorlessFromHeuristic
-					cachedFramework = CachedFramework(name: frameworkName, container: container, libraryIdentifier: identifier, hash: hash, linking: nil, swiftToolchainVersion: frameworkSwiftVersion)
+					cachedFramework = CachedFramework(name: frameworkName, container: container, libraryIdentifier: identifier, hash: hash, linking: linking, swiftToolchainVersion: frameworkSwiftVersion)
 				}
 				if let platformName = platformName, var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
