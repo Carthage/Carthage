@@ -1656,7 +1656,7 @@ public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 		domain: NSCocoaErrorDomain,
 		code: CocoaError.fileReadCorruptFile.rawValue,
 		userInfo: [
-			NSLocalizedDescriptionKey: "Cannot retrive binary file from bundle at \(packageURL)",
+			NSLocalizedDescriptionKey: "Cannot retrieve binary file from bundle at \(packageURL)",
 			NSLocalizedRecoverySuggestionErrorKey: "Does the bundle contain an Info.plist?"
 		]
 	)))
