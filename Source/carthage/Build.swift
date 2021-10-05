@@ -13,7 +13,7 @@ extension BuildOptions: OptionsProtocol {
 	}
 
 	public static func evaluate(_ mode: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
-		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
+		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', 'macCatalyst', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
 		return curry(BuildOptions.init)
