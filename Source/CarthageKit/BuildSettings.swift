@@ -125,7 +125,20 @@ public struct BuildSettings {
 		return load(with: BuildArguments(project: project, scheme: scheme))
 			.zip(with: SDK.setsFromJSONShowSDKsWithFallbacks.promoteError(CarthageError.self))
 			.take(first: 1)
-			.map { $1.intersection($0.buildSDKRawNames.map { sdk in SDK(name: sdk, simulatorHeuristic: "") }) }
+			.map {
+                $1.intersection($0.buildSDKRawNames.flatMap { sdk -> Set<SDK> in
+                    var result: Set<SDK> = [
+                        SDK(name: sdk, simulatorHeuristic: "")
+                    ]
+                    
+                    if sdk == "macosx" {
+                        // Add a copy of this SDK for the macCatalyst variant
+                        result.update(with: SDK(name: sdk, simulatorHeuristic: "", variant: .macCatalyst))
+                    }
+                    
+                    return result
+                })
+            }
 			.flatten()
 	}
 
@@ -258,6 +271,11 @@ public struct BuildSettings {
 	public var productName: Result<String, CarthageError> {
 		return self["PRODUCT_NAME"]
 	}
+    
+    /// Attempts to determine the full name of the built product.
+    public var fullProductName: Result<String, CarthageError> {
+        return self["FULL_PRODUCT_NAME"]
+    }
 
 	/// Attempts to determine the URL to the built product's wrapper, corresponding
 	/// to its xcodebuild action.

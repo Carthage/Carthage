@@ -255,6 +255,16 @@ extension URL {
 		return .failure(.readFailed(self, error))
 	}
 
+    public func hasSubdirectory(_ name: String) -> Bool {
+        let manager = FileManager.default
+        
+        var isDirectory: ObjCBool = false
+        let exists = manager.fileExists(atPath: self.appendingPathComponent(name).path,
+                                        isDirectory: &isDirectory)
+        
+        return exists && isDirectory.boolValue
+    }
+    
 	public func hasSubdirectory(_ possibleSubdirectory: URL) -> Bool {
 		let standardizedSelf = self.standardizedFileURL
 		let standardizedOther = possibleSubdirectory.standardizedFileURL
