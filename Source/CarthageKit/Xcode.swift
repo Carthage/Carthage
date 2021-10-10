@@ -631,7 +631,7 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings,
             }
     }
     
-    let buildDSYMs = SignalProducer.combineLatest(
+    let archiveAndBinary = SignalProducer.combineLatest(
         archive,
         framework,
         SignalProducer(result: settings.fullProductName)
@@ -639,30 +639,22 @@ private func mergeIntoXCFramework(in directoryURL: URL, settings: BuildSettings,
         .map {
             ($0, $1.appendingPathComponent(($2 as NSString).deletingPathExtension))
         }
+    
+    let buildDSYMs = archiveAndBinary
         .flatMap(.concat, createDebugInformation)
         .ignoreTaskData()
         .map { $0 }
-    
-//    let buildDSYMs = archive
-//        .combineLatest(with: SignalProducer(result: settings.fullProductName))
-//        .map { archive, productName in
-//            archive
-//                .appendingPathComponent("dSYMs")
-//                .appendingPathComponent(productName)
-//                .appendingPathExtension("dSYM")
-//        }
-    
-    // TODO:  --------- !!!
-    
-    // TODO: fix this
-//	let buildSymbolMaps = archive
-//		.filter { _ in settings.bitcodeEnabled.value == true }
-//		.flatMap(.concat, BCSymbolMapsForFramework)
-//		.filter({ (try? $0.checkResourceIsReachable()) ?? false })
-//		.map({ $0 })
+
+    let buildSymbolMaps = archiveAndBinary
+		.flatMap(.concat, BCSymbolMaps)
+        .map { URL(fileURLWithPath: $0.path) } // `CFURLResourceIsReachable` requires URLs with a scheme
+		.filter {
+            (try? $0.checkResourceIsReachable()) ?? false
+        }
 	let buildDebugSymbols = buildDSYMs
-//        .concat(buildSymbolMaps)
+        .concat(buildSymbolMaps)
         .collect()
+    
 	let platformName = SignalProducer(result: settings.platformTripleOS)
 	let fileManager = FileManager.default
 	let createTemporaryDirectory = fileManager.reactive.createTemporaryDirectoryWithTemplate("carthage-xcframework-XXXXXX")
@@ -1601,6 +1593,22 @@ public func UUIDsForFramework(_ frameworkURL: URL) -> SignalProducer<Set<UUID>, 
 /// Sends a set of UUIDs for each architecture present in the given dSYM.
 public func UUIDsForDSYM(_ dSYMURL: URL) -> SignalProducer<Set<UUID>, CarthageError> {
 	return UUIDsFromDwarfdump(dSYMURL)
+}
+
+/// Sends an URL for each bcsymbolmap file for the given archive.
+/// The files do not necessarily exist on disk.
+///
+/// The returned URLs are relative to the parent directory of the framework.
+public func BCSymbolMaps(archiveURL: URL, binaryURL: URL) -> SignalProducer<URL, CarthageError> {
+    let frameworkURL = binaryURL.deletingLastPathComponent()
+    return UUIDsForFramework(frameworkURL)
+        .flatMap(.merge) { uuids in SignalProducer<UUID, CarthageError>(uuids) }
+        .map { uuid in
+            return archiveURL
+                .appendingPathComponent("BCSymbolMaps", isDirectory: true)
+                .appendingPathComponent(uuid.uuidString, isDirectory: false)
+                .appendingPathExtension("bcsymbolmap")
+        }
 }
 
 /// Sends an URL for each bcsymbolmap file for the given framework.
