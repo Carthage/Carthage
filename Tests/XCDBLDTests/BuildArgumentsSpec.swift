@@ -88,6 +88,8 @@ class BuildArgumentsSpec: QuickSpec {
 			itCreatesBuildArguments("includes the destination if given", arguments: ["-destination", "exampleDestination"]) { subject in
 				subject.destination = "exampleDestination"
 			}
+            
+            // TODO: variant
 
 			describe("specifying onlyActiveArchitecture") {
 				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=YES if it's set to true", arguments: ["ONLY_ACTIVE_ARCH=YES"]) { subject in

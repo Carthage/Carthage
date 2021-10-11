@@ -16,6 +16,7 @@ class SDKEncompassingPlatformsSpec: QuickSpec {
 					SDK(name: "platformbox", simulatorHeuristic: ""): (false, "platformbox"),
 					SDK(name: "wAtchsiMulator", simulatorHeuristic: ""): (true, "watchOS"),
 					SDK(name: "macosx", simulatorHeuristic: ""): (false, "Mac"), /* special case */
+                    SDK(name: "macCatalyst", simulatorHeuristic: ""): (false, "Mac"), /* special case */
 				]
 
 				pairs.forEach { sdk, result in
