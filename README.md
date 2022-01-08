@@ -48,7 +48,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 1. List the desired dependencies in the [Cartfile][], for example:
 
 	```
-	github "Alamofire/Alamofire" ~> 5.4
+	github "Alamofire/Alamofire" ~> 5.5
 	```
 
 1. Run `carthage update --use-xcframeworks`
