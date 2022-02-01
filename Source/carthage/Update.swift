@@ -14,6 +14,7 @@ public struct UpdateCommand: CommandProtocol {
 		public let logPath: String?
 		public let useNewResolver: Bool
 		public let useNetrc: Bool
+		public let useSSH: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
@@ -21,6 +22,7 @@ public struct UpdateCommand: CommandProtocol {
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
 			return BuildCommand.Options(
+				useSSH: useSSH,
 				buildOptions: buildOptions,
 				skipCurrent: true,
 				colorOptions: checkoutOptions.colorOptions,
@@ -51,6 +53,7 @@ public struct UpdateCommand: CommandProtocol {
 					 logPath: String?,
 					 useNewResolver: Bool,
 					 useNetrc: Bool,
+					 useSSH: Bool,
 					 buildOptions: BuildOptions,
 					 checkoutOptions: CheckoutCommand.Options
 			) {
@@ -60,6 +63,7 @@ public struct UpdateCommand: CommandProtocol {
 			self.logPath = logPath
 			self.useNewResolver = useNewResolver
 			self.useNetrc = useNetrc
+			self.useSSH = useSSH
 			self.buildOptions = buildOptions
 			self.checkoutOptions = checkoutOptions
 			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
@@ -73,6 +77,10 @@ public struct UpdateCommand: CommandProtocol {
 									 defaultValue: false,
 									 usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
 			
+			let sshOption = Option(key: "use-ssh",
+								   defaultValue: false,
+								   usage: "use SSH for downloading GitHub repositories")
+			
 			// Swift 5.1 workaround
 			// Carthage Issue: https://github.com/Carthage/Carthage/issues/2831
 			// Swift Compiler Bug: https://bugs.swift.org/browse/SR-11423
@@ -85,6 +93,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| Option(key: "log-path", defaultValue: defaultLogPath, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
 				<*> mode <| netrcOption
+				<*> mode <| sshOption
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
 		}
@@ -104,7 +113,7 @@ public struct UpdateCommand: CommandProtocol {
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
 				
 				project.useNetrc = options.useNetrc
-				
+				project.preferHTTPS = !options.useSSH
 				let checkDependencies: SignalProducer<(), CarthageError>
 				if let depsToUpdate = options.dependenciesToUpdate {
 					checkDependencies = project

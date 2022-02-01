@@ -31,6 +31,7 @@ extension BuildOptions: OptionsProtocol {
 /// Type that encapsulates the configuration and evaluation of the `build` subcommand.
 public struct BuildCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
+		public let useSSH: Bool
 		public let buildOptions: BuildOptions
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
@@ -59,13 +60,23 @@ public struct BuildCommand: CommandProtocol {
 									 defaultValue: false,
 									 usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
 			
+			let sshOption = Option(key: "use-ssh",
+								   defaultValue: false,
+								   usage: "use SSH for downloading GitHub repositories")
+            
+			// Swift 5.1 workaround
+			// Carthage Issue: https://github.com/Carthage/Carthage/issues/2831
+			// Swift Compiler Bug: https://bugs.swift.org/browse/SR-11423
+			let defaultLogPath: String? = nil
+            
 			return curry(Options.init)
+				<*> mode <| sshOption
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> mode <| Option(key: "log-path", defaultValue: defaultLogPath, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
 				<*> mode <| netrcOption
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build", usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
@@ -134,6 +145,7 @@ public struct BuildCommand: CommandProtocol {
 		let shouldBuildCurrentProject =  !options.skipCurrent || options.archive
 
 		let project = Project(directoryURL: directoryURL)
+        project.preferHTTPS = !options.useSSH
 		project.useNetrc = options.useNetrc
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
