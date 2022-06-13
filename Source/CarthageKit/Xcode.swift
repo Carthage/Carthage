@@ -729,20 +729,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
     }
     
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
-			var argsForLoading = buildArgs
-			argsForLoading.sdk = sdk
-
-			return BuildSettings
-				.load(with: argsForLoading)
-				.filter { settings in
-					// Filter out SDKs that require bitcode when bitcode is disabled in
-					// project settings. This is necessary for testing frameworks, which
-					// must add a User-Defined setting of ENABLE_BITCODE=NO.
-					return settings.bitcodeEnabled.value == true || !["appletvos", "watchos"].contains(sdk.rawValue)
-				}
-				.map { _ in sdk }
-		}
 		.reduce(into: [] as Set) { $0.formUnion([$1]) }
 		.flatMap(.concat) { sdks -> SignalProducer<(String, [SDK]), CarthageError> in
 			if sdks.isEmpty { fatalError("No SDKs found for scheme \(scheme)") }
