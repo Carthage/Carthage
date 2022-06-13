@@ -53,7 +53,8 @@ public func mergeIntoXCFramework(
 	debugSymbols: [URL],
 	platformName: String,
 	variant: String?,
-	outputURL: URL
+	outputURL: URL,
+    isCatalyst: Bool
 ) -> SignalProducer<URL, TaskError> {
 	let baseArguments = ["xcodebuild", "-create-xcframework", "-allow-internal-distribution", "-output", outputURL.path]
 	let newLibraryArguments = ["-framework", framework.path] + debugSymbols.flatMap { ["-debug-symbols", $0.path] }
@@ -66,9 +67,15 @@ public func mergeIntoXCFramework(
 	}
 	.flatMap(.concat) { xcframework -> SignalProducer<XCFramework.Library, AnyError> in
 		// Only persist frameworks which _won't_ be overwritten by the new library
-		return SignalProducer(xcframework.availableLibraries.filter { library in
-			library.supportedPlatform != platformName || library.supportedPlatformVariant != variant
-		})
+		return SignalProducer(
+            xcframework.availableLibraries
+                .filter { library in
+                    !(library.isCatalyst && isCatalyst)
+                }
+                .filter { library in
+                    library.supportedPlatform != platformName || library.supportedPlatformVariant != variant
+                }
+        )
 	}
 	.flatMap(.concat) { library -> SignalProducer<String, AnyError> in
 		// Discover and include dSYMs and bcsymbolmaps for each library
@@ -127,4 +134,10 @@ struct XCFramework: Decodable {
 		case availableLibraries = "AvailableLibraries"
 		case version = "XCFrameworkFormatVersion"
 	}
+}
+
+extension XCFramework.Library {
+    var isCatalyst: Bool {
+        return self.supportedPlatformVariant == "maccatalyst"
+    }
 }

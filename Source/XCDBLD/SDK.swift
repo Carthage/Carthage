@@ -12,14 +12,23 @@ import ReactiveSwift
 ///         `platformSimulatorlessFromHeuristic` which (in practice) usually
 ///         draws upon data from `xcodebuild -showsdks -json`.
 public struct SDK: Hashable {
+    public enum Variant {
+        case macCatalyst
+    }
+    
 	private let name: String
 	private let simulatorHeuristic: String
-	// it’s a fairly solid heuristic
-
-	public init(name: String, simulatorHeuristic: String) {
-		(self.name, self.simulatorHeuristic) = (name, simulatorHeuristic)
+    private var variant: Variant? = nil
+    
+    public init(name: String, simulatorHeuristic: String) {
+        self.init(name: name, simulatorHeuristic: simulatorHeuristic, variant: nil)
 	}
-
+    
+    public init(name: String, simulatorHeuristic: String, variant: Variant?) {
+        (self.name, self.simulatorHeuristic) = (name, simulatorHeuristic)
+        self.variant = variant
+    }
+    
 	public var rawValue: String { return name.lowercased() }
 
 	public var isSimulator: Bool {
@@ -35,6 +44,10 @@ public struct SDK: Hashable {
 	public var isDevice: Bool {
 		return !isSimulator
 	}
+    
+    public var isMacCatalyst: Bool {
+        return self.variant == .macCatalyst
+    }
 
 	public func hash(into: inout Hasher) {
 		return into.combine(self.rawValue)
@@ -78,7 +91,7 @@ public struct SDK: Hashable {
 	/// - Note: The aliases are intended to be matched case-insensitevly.
 	private static let knownIn2019YearDictionary: [String: (String, [String], String)] =
 		([
-			"MacOSX": (["macOS", "Mac", "OSX"], "macOS"),
+			"MacOSX": (["macOS", "Mac", "OSX", "macCatalyst"], "macOS"),
 			"iPhoneOS": (["iOS Device", "iOS"], "iOS"),
 			"iPhoneSimulator": (["iOS Simulator"], "Simulator - iOS"),
 			"WatchOS": (["watchOS"], "watchOS"),
@@ -129,7 +142,12 @@ public struct SDK: Hashable {
 		]
 			.reduce(into: [] as Set<SDK>) {
 				guard let value = $1 else { return }
-				$0.formUnion([SDK(name: value.0, simulatorHeuristic: value.2)])
+                
+                let variant: Variant? = argumentSubstring == "macCatalyst"
+                ? .macCatalyst
+                : nil
+                
+                return $0.formUnion([SDK(name: value.0, simulatorHeuristic: value.2, variant: variant)])
 			}
 	}
 }
@@ -146,19 +164,21 @@ extension SDK {
 			.materializeResults() // to map below and ignore errors
 			.filterMap { try? JSONSerialization.jsonObject(with: $0.value?.value ?? Data(bytes: []), options: JSONSerialization.ReadingOptions()) as? NSArray ?? NSArray() }
 			.map {
-                $0.compactMap { (nsobject: Any) -> SDK? in
+                $0
+                    .map { $0 as! NSObject }
+                    .compactMap { nsobject -> SDK? in
 					let platform = NSString.lowercased(
-						(nsobject as! NSObject).value(forKey: "platform") as? NSString ?? ""
+						nsobject.value(forKey: "platform") as? NSString ?? ""
 					)(with: Locale?.none)
 
 					guard platform.isEmpty == false else { return nil }
 
 					guard NSString.lowercased(
-						(nsobject as! NSObject).value(forKey: "canonicalName") as? NSString ?? "\0"
+						nsobject.value(forKey: "canonicalName") as? NSString ?? "\0"
 					)(with: Locale?.none).hasPrefix(platform) else { return nil }
 
 					let simulatorHeuristic = CollectionOfOne(
-						(nsobject as! NSObject).value(forKey: "displayName") as? NSString
+						nsobject.value(forKey: "displayName") as? NSString
 					).reduce(into: "") {
 						$0 = $1?.appending("") ?? $0
 						let potentialVersion = $0.reversed().drop(while: "1234567890.".contains)
@@ -180,7 +200,7 @@ extension SDK {
 					}
 
 					let titleCasedPlatform = repeatElement(
-						(nsobject as! NSObject).value(forKey: "platformPath") as? NSString ?? "", count: 1
+						nsobject.value(forKey: "platformPath") as? NSString ?? "", count: 1
 					).reduce(into: String?.none) { $0 = parseTitleCasePlatform($1.appending("")) }
 
                     return SDK(name: titleCasedPlatform ?? platform, simulatorHeuristic: simulatorHeuristic)
@@ -190,6 +210,33 @@ extension SDK {
 				guard $0 == nil else { return }
 				$0 = Set($1)
 			}
+}
+
+extension SDK {
+    public var productName: String {
+        switch variant {
+        case .none: return self.name
+        case .macCatalyst: return "\(self.name)-catalyst"
+        }
+    }
+}
+
+extension SDK {
+    public var destination: String? {
+        switch (self.rawValue, self.variant) {
+        case (_, .macCatalyst?): return "generic/platform=macOS,variant=Mac Catalyst"
+        case ("macos", _): return "generic/platform=macOS"
+        case ("iphoneos", nil): return "generic/platform=iOS"
+        case ("iphonesimulator", nil): return "generic/platform=iOS Simulator"
+        case ("watchos", nil): return "generic/platform=watchOS"
+        case ("watchsimulator", nil): return "generic/platform=watchOS Simulator"
+        case ("appletvos", nil): return "generic/platform=tvOS"
+        case ("appletvsimulator", nil): return "generic/platform=tvOS Simulator"
+            
+        default:
+            return nil
+        }
+    }
 }
 
 extension SDK: CustomStringConvertible {

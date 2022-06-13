@@ -11,6 +11,8 @@ extension MachOType {
 	}
 }
 
+// TODO: ?
+
 extension SDK {
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
