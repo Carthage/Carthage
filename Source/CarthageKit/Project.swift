@@ -1452,8 +1452,33 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageEr
 					.skipNil()
 					.single()?
 					.value
+        
+        // Read platform field under Load Command LC_BUILD_VERSION
+        var platformFromBuildVersion: String?
+        let loadCommands = task.launch(standardInput: nil)
+          .ignoreTaskData()
+          .map { String(data: $0, encoding: .utf8) ?? "" }
+          .filter { !$0.isEmpty }
+          .flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+            output.linesProducer
+          }
+          .reduce([String](), { res, item in
+            var arr = res
+            arr.append(item.trimmingCharacters(in: .whitespacesAndNewlines))
+            return arr
+          })
+          .single()?
+          .value
+        if let loadCommands = loadCommands {
+          if let buildVersionIndex = loadCommands.firstIndex(of: "cmd LC_BUILD_VERSION") {
+            let rem = loadCommands.suffix(from: buildVersionIndex)
+            if let platformLine = rem.filter { $0.contains("platform") }.first, let platform = platformLine.split(separator: " ").last {
+              platformFromBuildVersion = String(platform.lowercased())
+            }
+          }
+        }
 
-				return sdkName
+				return sdkName ?? platformFromBuildVersion
 			}
 
 			// Try to read what platfrom this binary is for. Attempt in order:
