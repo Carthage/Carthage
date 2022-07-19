@@ -676,6 +676,9 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
+	let isXcode14OrHigher = XcodeVersion.make()?
+		.majorVersionNumber
+		.map { $0 >= 14 } ?? false
 
 	let buildArgs = BuildArguments(
 		project: project,
@@ -697,7 +700,10 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					// Filter out SDKs that require bitcode when bitcode is disabled in
 					// project settings. This is necessary for testing frameworks, which
 					// must add a User-Defined setting of ENABLE_BITCODE=NO.
-					return settings.bitcodeEnabled.value == true || !["appletvos", "watchos"].contains(sdk.rawValue)
+					// In Xcode 14 and up, bitcode is no longer required for any SDK.
+					return isXcode14OrHigher
+						|| settings.bitcodeEnabled.value == true
+						|| !["appletvos", "watchos"].contains(sdk.rawValue)
 				}
 				.map { _ in sdk }
 		}
