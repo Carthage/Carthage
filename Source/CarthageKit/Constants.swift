@@ -35,7 +35,10 @@ public struct Constants {
 		let urlResult: Result<URL, NSError> = Result(catching: {
 			try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 		}).flatMap { cachesURL in
-			let dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
+			var dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
+			if let cache_suffix = ProcessInfo.processInfo.environment["RUNNER_NAME"], !cache_suffix.isEmpty {
+				dependenciesURL = dependenciesURL.appendingPathComponent(cache_suffix)
+			}
 			let dependenciesPath = dependenciesURL.absoluteString
 
 			if fileManager.fileExists(atPath: dependenciesPath, isDirectory: nil) {
