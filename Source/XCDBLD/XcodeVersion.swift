@@ -13,6 +13,10 @@ public struct XcodeVersion {
 		self.buildVersion = buildVersion
 	}
 
+	public var majorVersionNumber: Int? {
+		version.components(separatedBy: ".").first.flatMap(Int.init)
+	}
+
 	internal init?(xcodebuildOutput: String) {
 		let range = NSRange(xcodebuildOutput.startIndex..., in: xcodebuildOutput)
 		guard let match = XcodeVersion.regex.firstMatch(in: xcodebuildOutput, range: range) else {
