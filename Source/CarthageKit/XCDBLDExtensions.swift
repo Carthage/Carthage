@@ -11,18 +11,18 @@ extension MachOType {
 	}
 }
 
-extension Platform {
+extension SDK {
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativePath: String {
-		let subfolderName = rawValue
+		let subfolderName = self.platformSimulatorlessFromHeuristic
 		return (Constants.binariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 
 	/// The relative URL at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativeURL: URL? {
-		let subfolderName = rawValue
+		let subfolderName = self.platformSimulatorlessFromHeuristic
 		return URL(string: Constants.binariesFolderPath)?.appendingPathComponent(subfolderName, isDirectory: true)
 	}
 }
@@ -41,10 +41,15 @@ extension ProjectLocator {
 			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive
 					.enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-					.map { _, url in url }
-					.filter { url in
-						return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
+					.filter { enumerator, url in
+						if directoriesToSkip.contains(where: { $0.hasSubdirectory(url) }) {
+							enumerator.skipDescendants()
+							return false
+						} else {
+							return true
+						}
 					}
+					.map { _, url in url }
 			}
 			.filterMap { url -> ProjectLocator? in
 				if let uti = url.typeIdentifier.value {
@@ -101,11 +106,6 @@ extension ProjectLocator {
 }
 
 extension SDK {
-	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
-	public static func from(string: String) -> Result<SDK, CarthageError> {
-		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
-	}
-
 	/// Split the given SDKs into simulator ones and device ones.
 	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) where S.Iterator.Element == SDK {
 		return (

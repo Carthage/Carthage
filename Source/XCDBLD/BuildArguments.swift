@@ -106,7 +106,7 @@ public struct BuildArguments {
 			// Since we wouldn't be trying to build this target unless it were
 			// for macOS already, just let xcodebuild figure out the SDK on its
 			// own.
-			if sdk != .macOSX {
+			if sdk.rawValue != "macosx" {
 				args += [ "-sdk", sdk.rawValue ]
 			}
 		}

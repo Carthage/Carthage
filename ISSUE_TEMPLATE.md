@@ -7,6 +7,7 @@
 * Are you using `--use-submodules`? 
 * Are you using `--cache-builds`? 
 * Are you using `--new-resolver`? 
+* Are you using `--use-xcframeworks`? 
 
 **Cartfile**
 ```

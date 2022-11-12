@@ -84,6 +84,83 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "whatisthisurleven"
 				}
+
+				context("when a relative local path with dots is given") {
+					let fileManager = FileManager.default
+					var startingDirectory: String!
+					var temporaryDirectoryURL: URL!
+
+					beforeEach {
+						startingDirectory = fileManager.currentDirectoryPath
+						temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+						fileManager.changeCurrentDirectoryPath(temporaryDirectoryURL.path)
+					}
+
+					afterEach {
+						fileManager.changeCurrentDirectoryPath(startingDirectory)
+					}
+
+					it("should sanitize even despite the given URL string being (pathologically) solely the nul character") {
+						// this project would not be able to be checked out
+					
+						let dependency = Dependency.git(GitURL("\u{0000}"))
+
+						expect(dependency.name) == "␀"
+					}
+
+					it("should sanitize even despite the given URL string being (pathologically) solely the nul character and path separators") {
+						// this project would not be able to be checked out
+					
+						let dependency = Dependency.git(GitURL("/\u{0000}/"))
+
+						expect(dependency.name) == "␀"
+					}
+
+					it("should sanitize even despite the given URL string containing (pathologically) the nul character") {
+						// this project would not be able to be checked out
+					
+						let dependency = Dependency.git(GitURL("./../../../../../\u{0000}myproject"))
+
+						expect(dependency.name) == "␀myproject"
+					}
+
+
+					it("should sanitize if the given URL string is (pathologically) «.»") {
+						let dependency = Dependency.git(GitURL("."))
+
+						expect(dependency.name) == "\u{FF0E}"
+					}
+
+					it ("should be the directory name if the given URL string is (pathologically) prefixed by «./»") {
+						let dependency = Dependency.git(GitURL("./myproject"))
+
+						expect(dependency.name) == "myproject"	
+					}
+
+					it("should sanitize if the given URL string is (pathologically) «..»") {
+						let dependency = Dependency.git(GitURL(".."))
+
+						expect(dependency.name) == "\u{FF0E}\u{FF0E}"
+					}
+
+					it("should sanitize if the given URL string is (pathologically) «...git»") {
+						let dependency = Dependency.git(GitURL("...git"))
+
+						expect(dependency.name) == "\u{FF0E}\u{FF0E}"
+					}
+
+					it ("should be the directory name if the given URL string is (pathologically) prefixed by «../» with (pathologically) no URL scheme") {
+						let dependency = Dependency.git(GitURL("../myproject"))
+
+						expect(dependency.name) == "myproject"
+					}
+
+					it ("should sanitize if the given URL string is (pathologically) suffixed by «/..»") {
+						let dependency = Dependency.git(GitURL("../myproject/.."))
+
+						expect(dependency.name) == "\u{FF0E}\u{FF0E}"
+					}
+				}
 			}
 
 			context("binary") {

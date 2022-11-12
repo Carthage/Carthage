@@ -18,11 +18,13 @@ extension BuildOptions: OptionsProtocol {
 
 		return curry(BuildOptions.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
-			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage)).map { $0.platforms }
+			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage))
+				.map { if case let .setDisjointWithFlaggedAll(set) = $0 { return set } else { return nil } }
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "don't use downloaded binaries when possible")
+			<*> mode <| Option(key: "use-xcframeworks", defaultValue: false, usage: "create xcframework bundles instead of one framework per platform (requires Xcode 12+)")
 	}
 }
 
@@ -36,6 +38,7 @@ public struct BuildCommand: CommandProtocol {
 		public let directoryPath: String
 		public let logPath: String?
 		public let archive: Bool
+		public let useNetrc: Bool
 		public let dependenciesToBuild: [String]?
 
 		/// If `archive` is true, this will be a producer that will archive
@@ -52,6 +55,10 @@ public struct BuildCommand: CommandProtocol {
 		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			let netrcOption = Option(key: "use-netrc",
+									 defaultValue: false,
+									 usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
+			
 			return curry(Options.init)
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
@@ -60,6 +67,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
+				<*> mode <| netrcOption
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build", usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
@@ -126,6 +134,7 @@ public struct BuildCommand: CommandProtocol {
 		let shouldBuildCurrentProject =  !options.skipCurrent || options.archive
 
 		let project = Project(directoryURL: directoryURL)
+		project.useNetrc = options.useNetrc
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
@@ -213,115 +222,33 @@ public struct BuildCommand: CommandProtocol {
 	}
 }
 
-/// Represents the user's chosen platform to build for.
 public enum BuildPlatform: Equatable {
-	/// Build for all available platforms.
+	case setDisjointWithFlaggedAll(Set<SDK>)
 	case all
-
-	/// Build only for iOS.
-	case iOS
-
-	/// Build only for macOS.
-	case macOS
-
-	/// Build only for watchOS.
-	case watchOS
-
-	/// Build only for tvOS.
-	case tvOS
-
-	/// Build for multiple platforms within the list.
-	case multiple([BuildPlatform])
-
-	/// The set of `Platform` corresponding to this setting.
-	public var platforms: Set<Platform> {
-		switch self {
-		case .all:
-			return []
-
-		case .iOS:
-			return [ .iOS ]
-
-		case .macOS:
-			return [ .macOS ]
-
-		case .watchOS:
-			return [ .watchOS ]
-
-		case .tvOS:
-			return [ .tvOS ]
-
-		case let .multiple(buildPlatforms):
-			return buildPlatforms.reduce(into: []) { set, buildPlatform in
-				set.formUnion(buildPlatform.platforms)
-			}
-		}
-	}
-}
-
-extension BuildPlatform: CustomStringConvertible {
-	public var description: String {
-		switch self {
-		case .all:
-			return "all"
-
-		case .iOS:
-			return "iOS"
-
-		case .macOS:
-			return "macOS"
-
-		case .watchOS:
-			return "watchOS"
-
-		case .tvOS:
-			return "tvOS"
-
-		case let .multiple(buildPlatforms):
-			return buildPlatforms.map { $0.description }.joined(separator: ", ")
-		}
-	}
 }
 
 extension BuildPlatform: ArgumentProtocol {
 	public static let name = "platform"
 
-	private static let acceptedStrings: [String: BuildPlatform] = [
-		"macOS": .macOS, "Mac": .macOS, "OSX": .macOS, "macosx": .macOS,
-		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
-		"watchOS": .watchOS, "watchsimulator": .watchOS,
-		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
-		"all": .all,
-	]
+	private static func parseSet(_ string: String) throws -> BuildPlatform {
+		switch Set(string.split()) {
+		case []:
+			throw CocoaError(.keyValueValidation)
+		case let set:
+			guard set != ["all"] else { return .all }
+
+			guard set.isDisjoint(with: ["all"]) else { throw CocoaError(.keyValueValidation) /* because not solely `all` */ }
+
+			let values = try set.lazy.map(SDK.associatedSetOfKnownIn2019YearSDKs).reduce(into: [] as Set<SDK>) {
+				guard $1.isEmpty == false else { throw CocoaError(.keyValueValidation) }
+				$0.formUnion($1)
+			}
+
+			return .setDisjointWithFlaggedAll(values)
+		}
+	}
 
 	public static func from(string: String) -> BuildPlatform? {
-		let tokens = string.split()
-
-		let findBuildPlatform: (String) -> BuildPlatform? = { string in
-			return self.acceptedStrings
-				.first { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
-				.map { _, platform in platform }
-		}
-
-		switch tokens.count {
-		case 0:
-			return nil
-
-		case 1:
-			return findBuildPlatform(tokens[0])
-
-		default:
-			var buildPlatforms = [BuildPlatform]()
-			for token in tokens {
-				if let found = findBuildPlatform(token), found != .all {
-					buildPlatforms.append(found)
-				} else {
-					// Reject if an invalid value is included in the comma-
-					// separated string.
-					return nil
-				}
-			}
-			return .multiple(buildPlatforms)
-		}
+		return try? parseSet(string)
 	}
 }

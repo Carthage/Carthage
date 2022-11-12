@@ -42,6 +42,7 @@ binary "relative/path/MyFramework.json"                   // Locally hosted at r
 binary "/absolute/path/MyFramework.json"                  // Locally hosted at absolute path
 ```
 
+When downloading a binary only frameworks, `carthage` will take into account the user's `~/.netrc` file to determine authentication credentials if `--use-netrc` flag was set.
 
 #### Version requirement
 
@@ -147,12 +148,22 @@ For dependencies that do not have source code available, a binary project specif
 * The version **must** be a semantic version.  Git branches, tags and commits are not valid.
 * The location **must** be an `https` url.
 
+#### Publish an XCFramework build alongside the framework build using an `alt=` query parameter
+
+To support users who build with `--use-xcframework`, create two zips: one containing the framework bundle(s) for your dependency, the other containing xcframework(s). Include "framework" or "xcframework" in the names of the zips, for example:  `MyFramework.framework.zip` and `MyFramework.xcframework.zip`. In your project specification, join the two URLs into one using a query string:
+
+	https://my.domain.com/release/1.0.0/MyFramework.framework.zip?alt=https://my.domain.com/release/1.0.0/MyFramework.xcframework.zip
+
+Starting in version 0.38.0, Carthage extracts any `alt=` URLs from the version specification. When `--use-xcframeworks` is passed, it prefers downloading URLs with "xcframework" in the name.
+
+**For backwards compatibility,** provide the plain frameworks build _first_ (i.e. not as an alt URL), so that older versions of Carthage use it. Carthage versions prior to 0.38.0 fail to download and extract XCFrameworks.
+
 #### Example binary project specification
 
 ```
 {
 	"1.0": "https://my.domain.com/release/1.0.0/framework.zip",
-	"1.0.1": "https://my.domain.com/release/1.0.1/framework.zip"
+	"1.0.1": "https://my.domain.com/release/1.0.1/MyFramework.framework.zip?alt=https://my.domain.com/release/1.0.1/MyFramework.xcframework.zip"
 }
 
 ```

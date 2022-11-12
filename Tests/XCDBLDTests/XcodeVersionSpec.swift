@@ -28,6 +28,13 @@ class XcodeVersionSpec: QuickSpec {
 					expect(version2?.buildVersion) == "9M189t"
 				}
 			}
+
+			describe("major version") {
+				it("should return correct major version") {
+					let version = XcodeVersion(xcodebuildOutput: "Xcode 8.3.2\nBuild version 8E2002")
+					expect(version?.majorVersionNumber) == 8
+				}
+			}
 		}
 	}
 }

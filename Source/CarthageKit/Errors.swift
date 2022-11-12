@@ -13,6 +13,12 @@ public enum CarthageError: Error {
 		let dictionary: [URL: [URL]]
 	}
 
+	public struct XCFrameworkRequired: Equatable {
+		let productName: String
+		let commonArchitectures: Set<String>
+		let underlyingError: TaskError
+	}
+
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
 
@@ -67,7 +73,7 @@ public enum CarthageError: Error {
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case noSharedFrameworkSchemes(Dependency, Set<Platform>)
+	case noSharedFrameworkSchemes(Dependency, Set<SDK>)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
@@ -104,6 +110,13 @@ public enum CarthageError: Error {
 	/// An archive (.zip, .gz, .bz2 ...) contains binaries that would
 	/// be copied to the same destination path
 	case duplicatesInArchive(duplicates: DuplicatesInArchive)
+
+	/// (cause)
+	///
+	/// Building universal frameworks with common architectures is not possible.
+	/// 	The device and simulator slices for "(productName)" both build for: (commonArchitectures)
+	/// Rebuild with --use-xcframeworks to create an xcframework bundle instead.
+	case xcframeworkRequired(XCFrameworkRequired)
 }
 
 extension CarthageError {
@@ -197,6 +210,9 @@ extension CarthageError: Equatable {
 		case let (.duplicatesInArchive(left), .duplicatesInArchive(right)):
 			return left == right
 
+		case let (.xcframeworkRequired(left), .xcframeworkRequired(right)):
+			return left == right
+
 		default:
 			return false
 		}
@@ -277,7 +293,7 @@ extension CarthageError: CustomStringConvertible {
 		case let .noSharedFrameworkSchemes(dependency, platforms):
 			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
-				let platformsString = platforms.map { $0.rawValue }.joined(separator: ", ")
+				let platformsString = Set(platforms.map { $0.platformSimulatorlessFromHeuristic }).joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
@@ -381,6 +397,15 @@ extension CarthageError: CustomStringConvertible {
 				.map { "* \t\($0.value.map{ url in return url.absoluteString }.joined(separator: "\n\t")) \n\t\tto:\n\t\($0.key)" }
 				.joined(separator: "\n")
 			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
+
+		case let .xcframeworkRequired(info):
+			let archs = info.commonArchitectures.joined(separator: ", ")
+			return [
+				"\(info.underlyingError)",
+				"Building universal frameworks with common architectures is not possible. " +
+					"The device and simulator slices for \"\(info.productName)\" both build for: \(archs)",
+				"Rebuild with --use-xcframeworks to create an xcframework bundle instead."
+			].joined(separator: "\n")
 		}
 	}
 }

@@ -61,8 +61,11 @@ extension MachHeader {
 	///                 magic  cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
 	///            0xfeedfacf 16777223          3  0x00           1     8       1720 0x00002000
 	///
+	/// - Note: `objdump` invocation requires flags unimplemented in Xcode 7.X ⋯ as it stands,
+	///         only a moreso-alternative codepath invokes this; be cautious to not invert that.
 	/// - See Also:  [LLVM MachODump.cpp](https://llvm.org/viewvc/llvm-project/llvm/trunk/tools/llvm-objdump/MachODump.cpp?view=markup&pathrev=225383###see%C2%B7line%C2%B72745)
 	static func headers(forMachOFileAtUrl url: URL) -> SignalProducer<MachHeader, CarthageError> {
+		// TODO: Potentially, `mdfind` other non-version-7.X Xcodes that might contain valid `objdump`.
 
 		// This is the command `otool -h` actually invokes
 		let task = Task("/usr/bin/xcrun", arguments: [

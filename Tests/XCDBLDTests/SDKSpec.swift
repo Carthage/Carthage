@@ -4,51 +4,57 @@ import Quick
 
 @testable import XCDBLD
 
-class SDKSpec: QuickSpec {
+class SDKEncompassingPlatformsSpec: QuickSpec {
 	override func spec() {
-		describe("\(SDK.self)") {
-			describe("initializer") {
-				it("should return nil for empty string") {
-					expect(SDK(rawValue: "")).to(beNil())
+		describe("platformSimulatorlessFromHeuristic") {
+			it("should parse from different heuristics correctly") {
+				let pairs: KeyValuePairs = [
+					SDK(name: "platformboxsimulator", simulatorHeuristic: "Simulator - PlatformBox"): (true, "PlatformBox"),
+					SDK(name: "PlatformBoxSimulator", simulatorHeuristic: ""): (true, "PlatformBox"),
+					SDK(name: "platformboxsimulator", simulatorHeuristic: ""): (true, "platformbox"),
+					SDK(name: "PlatformBox", simulatorHeuristic: ""): (false, "PlatformBox"),
+					SDK(name: "platformbox", simulatorHeuristic: ""): (false, "platformbox"),
+					SDK(name: "wAtchsiMulator", simulatorHeuristic: ""): (true, "watchOS"),
+					SDK(name: "macosx", simulatorHeuristic: ""): (false, "Mac"), /* special case */
+				]
+
+				pairs.forEach { sdk, result in
+					expect(sdk.isSimulator) == result.0
+					expect(sdk.platformSimulatorlessFromHeuristic) == result.1
 				}
+			}
+		}
+
+		/*
+		describe("BuildPlatform") {
+			it("should parseSet and error where necessary") {
+				expect {
+					try BuildPlatform.parseSet(string: "ios,all")
+				}.to(throwError())
+
+				expect {
+					try BuildPlatform.parseSet(string: "all")
+				} == BuildPlatform.all
+
+				expect {
+					try BuildPlatform.parseSet(string: "all,all")
+				} == BuildPlatform.all
+
+				expect {
+					try BuildPlatform.parseSet(string: "ios")
+				}.notTo(throwError())
 				
-				it("should return nil for unexpected input") {
-					expect(SDK(rawValue: "speakerOS")).to(beNil())
-				}
-				
-				it("should return a valid value for expected input") {
-					let watchOS = SDK(rawValue: "watchOS")
-					expect(watchOS).notTo(beNil())
-					expect(watchOS) == SDK.watchOS
-					
-					let watchOSSimulator = SDK(rawValue: "wAtchsiMulator")
-					expect(watchOSSimulator).notTo(beNil())
-					expect(watchOSSimulator) == SDK.watchSimulator
-					
-					let tvOS1 = SDK(rawValue: "tvOS")
-					expect(tvOS1).notTo(beNil())
-					expect(tvOS1) == SDK.tvOS
-					
-					let tvOS2 = SDK(rawValue: "appletvos")
-					expect(tvOS2).notTo(beNil())
-					expect(tvOS2) == SDK.tvOS
-					
-					let tvOSSimulator = SDK(rawValue: "appletvsimulator")
-					expect(tvOSSimulator).notTo(beNil())
-					expect(tvOSSimulator) == SDK.tvSimulator
-					
-					let macOS = SDK(rawValue: "macosx")
-					expect(macOS).notTo(beNil())
-					expect(macOS) == SDK.macOSX
-					
-					let iOS = SDK(rawValue: "iphoneos")
-					expect(iOS).notTo(beNil())
-					expect(iOS) == SDK.iPhoneOS
-					
-					let iOSimulator = SDK(rawValue: "iphonesimulator")
-					expect(iOSimulator).notTo(beNil())
-					expect(iOSimulator) == SDK.iPhoneSimulator
-				}
+				expect {
+					try BuildPlatform.parseSet(string: "all,ios")
+				}.to(throwError())
+		*/
+
+		describe("Associated Sets of Known-In-2019-Year SDKs") {
+			it("should map correctly") {
+				expect(SDK.associatedSetOfKnownIn2019YearSDKs("TVOS").map { $0.rawValue }.sorted())
+					== [ "appletvos", "appletvsimulator" ]
+				expect(SDK.associatedSetOfKnownIn2019YearSDKs("ios").map { $0.rawValue }.sorted())
+					== [ "iphoneos", "iphonesimulator" ]
 			}
 		}
 	}

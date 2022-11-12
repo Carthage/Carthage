@@ -18,11 +18,19 @@ public struct FetchCache {
 
 	private static var lastFetchTimes: [GitURL: TimeInterval] = [:]
 
+	private static let lock = NSLock()
+
 	internal static func clearFetchTimes() {
+		lock.lock()
+		defer { lock.unlock() }
+
 		lastFetchTimes.removeAll()
 	}
 
 	internal static func needsFetch(forURL url: GitURL) -> Bool {
+		lock.lock()
+		defer { lock.unlock() }
+
 		guard let lastFetch = lastFetchTimes[url] else {
 			return true
 		}
@@ -33,6 +41,9 @@ public struct FetchCache {
 	}
 
 	fileprivate static func updateLastFetchTime(forURL url: GitURL?) {
+		lock.lock()
+		defer { lock.unlock() }
+
 		if let url = url {
 			lastFetchTimes[url] = Date().timeIntervalSince1970
 		}
@@ -156,7 +167,6 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 public func checkoutRepositoryToDirectory(
 	_ repositoryFileURL: URL,
 	_ workingDirectoryURL: URL,
-	force: Bool,
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { () -> Result<[String: String], CarthageError> in
@@ -174,23 +184,15 @@ public func checkoutRepositoryToDirectory(
 				)
 			}
 	}
-	.flatMap(.concat) { (environment: [String: String]) -> SignalProducer<String, CarthageError> in
-		var arguments = [ "checkout", "--quiet" ]
-		if force {
-			arguments.append("--force")
-		}
-		arguments.append(revision)
-
-		return launchGitTask(arguments, repositoryFileURL: repositoryFileURL, environment: environment)
+	.flatMap(.concat) { environment in
+		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
 	}
 	.then(SignalProducer<(), CarthageError>.empty)
 }
 
 /// Clones the given submodule into the working directory of its parent
 /// repository, but without any Git metadata.
-///
-/// `cacheURLMap` maps from a remote URL to an optional local cache URL
-public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL, cacheURLMap: ((GitURL) -> URL?)?) -> SignalProducer<(), CarthageError> {
+public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
 
 	func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
@@ -205,10 +207,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 	}
 
 	let purgeGitDirectories = FileManager.default.reactive
-		.enumerator(at: submoduleDirectoryURL,
-					includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ],
-					options: [ .skipsSubdirectoryDescendants ],
-					catchErrors: true)
+		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.attemptMap { enumerator, url -> Result<(), CarthageError> in
 			return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
 					try url.resourceValues(forKeys: [ .nameKey ]).name
@@ -230,23 +229,13 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 		}
 
 	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-			return repositoryCheck("remove submodule checkout") {
-				try FileManager.default.removeItem(at: submoduleDirectoryURL)
-			}
+		repositoryCheck("remove submodule checkout") {
+			try FileManager.default.removeItem(at: submoduleDirectoryURL)
 		}
-		.then(cloneOrFetch(
-			remoteURL: submodule.url,
-			cacheURL: cacheURLMap?(submodule.url),
-			destinationURL: submoduleDirectoryURL,
-			isDestinationBare: false,
-			commitish: submodule.sha))
-		.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
-		.then(submodulesInRepository(submoduleDirectoryURL)
-			.flatMap(.concat) { submodule -> SignalProducer<(), CarthageError> in
-				return cloneSubmoduleInWorkingDirectory(submodule, submoduleDirectoryURL, cacheURLMap: cacheURLMap)
-			}
-		)
-		.then(purgeGitDirectories)
+	}
+	.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
+	.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+	.then(purgeGitDirectories)
 }
 
 /// Recursively checks out the given submodule's revision, in its working
@@ -551,93 +540,4 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 					.then(SignalProducer<(), CarthageError>.empty)
 			}
 		}
-}
-
-/// Used by the cloneOrFetch function to indicate whether the operation will be a clone or fetching
-public enum CloneOrFetch {
-	case cloning, fetching
-}
-
-/// Clones the given project to the given local URL,
-/// or fetches inside it if it has already been cloned.
-/// Optionally takes a commitish to check for prior to fetching.
-///
-/// Returns a signal which will send the operation type once started,
-/// then complete when the operation completes.
-public func cloneOrFetch(
-	remoteURL: GitURL,
-	to repositoryURL: URL,
-	isBare: Bool,
-	commitish: String? = nil
-) -> SignalProducer<CloneOrFetch?, CarthageError> {
-	return isGitRepository(repositoryURL)
-		.flatMap(.merge) { isRepository -> SignalProducer<CloneOrFetch?, CarthageError> in
-			if isRepository {
-				let fetchProducer: () -> SignalProducer<CloneOrFetch?, CarthageError> = {
-					guard FetchCache.needsFetch(forURL: remoteURL) else {
-						return SignalProducer(value: nil)
-					}
-
-					return SignalProducer(value: CloneOrFetch.fetching)
-						.concat(
-							fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
-								.then(SignalProducer<CloneOrFetch?, CarthageError>.empty)
-						)
-				}
-
-				// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
-				if let commitish = commitish {
-					return SignalProducer.zip(
-							branchExistsInRepository(repositoryURL, pattern: commitish),
-							commitExistsInRepository(repositoryURL, revision: commitish)
-						)
-						.flatMap(.concat) { branchExists, commitExists -> SignalProducer<CloneOrFetch?, CarthageError> in
-							// If the given commitish is a branch, we should fetch.
-							if branchExists || !commitExists {
-								return fetchProducer()
-							} else {
-								return SignalProducer(value: nil)
-							}
-						}
-				} else {
-					return fetchProducer()
-				}
-			} else {
-				// Either the directory didn't exist or it did but wasn't a git repository
-				// (Could happen if the process is killed during a previous directory creation)
-				// So we remove it, then clone
-				_ = try? FileManager.default.removeItem(at: repositoryURL)
-				return SignalProducer(value: CloneOrFetch.cloning)
-					.concat(
-						cloneRepository(remoteURL, repositoryURL, isBare: isBare)
-							.then(SignalProducer<CloneOrFetch?, CarthageError>.empty)
-					)
-			}
-		}
-}
-
-/// Clones the given project to the given destination URL,
-/// or fetches inside it if it has already been cloned.
-/// If a `cacheURL` is passed, first clone or fetch in the cache repository.
-/// Optionally takes a commitish to check for prior to fetching.
-///
-/// Returns a signal which will send a void value when the operation completes.
-public func cloneOrFetch(
-	remoteURL: GitURL,
-	cacheURL: URL?,
-	isCacheBare: Bool = true,
-	destinationURL: URL,
-	isDestinationBare: Bool,
-	commitish: String? = nil
-) -> SignalProducer<(), CarthageError> {
-	if let cacheURL = cacheURL {
-		return cloneOrFetch(remoteURL: remoteURL, to: cacheURL, isBare: isCacheBare, commitish: commitish)
-			.then(cloneOrFetch(remoteURL: GitURL(cacheURL.path), to: destinationURL, isBare: isDestinationBare, commitish: commitish))
-			.map { _ in () }
-			.take(last: 1)
-	} else {
-		return cloneOrFetch(remoteURL: remoteURL, to: destinationURL, isBare: isDestinationBare, commitish: commitish)
-			.map { _ in () }
-			.take(last: 1)
-	}
 }

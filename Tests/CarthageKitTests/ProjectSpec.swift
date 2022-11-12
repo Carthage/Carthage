@@ -19,7 +19,7 @@ class ProjectSpec: QuickSpec {
 			let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil)!
 			let noSharedSchemesBuildDirectoryURL = noSharedSchemesDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func build(directoryURL url: URL, platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: url)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
@@ -34,11 +34,11 @@ class ProjectSpec: QuickSpec {
 				return result.value!.map { $0.name }
 			}
 
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func buildDependencyTest(platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: directoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
 
-			func buildNoSharedSchemesTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func buildNoSharedSchemesTest(platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: noSharedSchemesDirectoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
 
@@ -57,7 +57,7 @@ class ProjectSpec: QuickSpec {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 				let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS", "TestFramework1_iOS"]
 
-				let result = buildDependencyTest(platforms: [], cacheBuilds: false)
+				let result = buildDependencyTest(platforms: nil, cacheBuilds: false)
 
 				expect(result.filter { $0.contains("Mac") }) == macOSexpected
 				expect(result.filter { $0.contains("iOS") }) == iOSExpected
@@ -87,9 +87,12 @@ class ProjectSpec: QuickSpec {
 			}
 
 			describe("createAndCheckVersionFiles") {
-				func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
+				func overwriteFramework(_ frameworkName: String, type: FrameworkType, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
-					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+					let frameworkURL = platformURL.appendingPathComponent(
+						type == .static ? "Static/\(frameworkName).framework" : "\(frameworkName).framework",
+						isDirectory: false
+					)
 					let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
 
 					let data = "junkdata".data(using: .utf8)!
@@ -175,7 +178,7 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					overwriteFramework("TestFramework3", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
@@ -209,7 +212,7 @@ class ProjectSpec: QuickSpec {
 										  inDirectory: buildDirectoryURL,
 										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
 
-					let allDSymsRemoved = expected
+					let allDSymsRemoved = ["TestFramework3_Mac", "TestFramework2_Mac"] // TestFramework1 is static; doesn't produce a dSYM
 						.compactMap { removeDsym($0.dropLast(4).description, forPlatformName: "Mac", inDirectory: buildDirectoryURL) }
 						.reduce(true) { acc, next in return  acc && next }
 					expect(allDSymsRemoved) == true
@@ -224,7 +227,7 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					overwriteFramework("TestFramework2", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
@@ -254,7 +257,7 @@ class ProjectSpec: QuickSpec {
 					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
 					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
 
-					overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					overwriteFramework("TestFramework1", type: .static, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
@@ -453,8 +456,8 @@ class ProjectSpec: QuickSpec {
 				let actualDefinition = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.value
 
 				let expectedBinaryProject = BinaryProject(versions: [
-					PinnedVersion("1.0"): URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!,
-					PinnedVersion("1.0.1"): URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
+					PinnedVersion("1.0"): [URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!],
+					PinnedVersion("1.0.1"): [URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!],
 				])
 				expect(actualDefinition) == expectedBinaryProject
 			}
@@ -595,152 +598,6 @@ class ProjectSpec: QuickSpec {
 			it("should check the framework's executable binary and produce a platform") {
 				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
 				expect(actualPlatform) == .iOS
-			}
-		}
-
-		describe("cleanup Carthage directory") {
-			let baseDirectoryURL = Bundle(for: type(of: self)).url(forResource: "CleanupTest", withExtension: nil)!
-
-			it("should successfully remove files not needed") {
-				let directoryURL = baseDirectoryURL.appendingPathComponent("Valid", isDirectory: true)
-				let project = Project(directoryURL: directoryURL)
-				var events = [ProjectEvent]()
-				project.projectEvents.observeValues { events.append($0) }
-
-				expect(project.removeUnneededItems().wait().error).to(beNil())
-
-				let removedItems = events.compactMap { event -> URL? in
-					guard case let .removingUnneededItem(url) = event else {
-						fail()
-						return nil
-					}
-					return url
-				}
-
-				let expectedPaths = [
-					("Build/Mac/TestFramework2.framework.dSYM", true),
-					("Build/Mac/TestFramework1.framework.dSYM", true),
-					("Build/iOS/TestFramework2.framework.dSYM", true),
-					("Build/iOS/TestFramework1.framework.dSYM", true),
-					("Build/Mac/TestFramework2.framework", true),
-					("Build/Mac/TestFramework1.framework", true),
-					("Build/iOS/TestFramework2.framework", true),
-					("Build/iOS/TestFramework1.framework", true),
-					("Checkouts/TestFramework1", true),
-					("Checkouts/TestFramework2", true),
-					("Build/iOS/59F47BB3-1D4F-3B7F-A0D3-273E2F5B9526.bcsymbolmap", false),
-					("Build/iOS/1047B36A-DF55-31AE-B619-D457C836A39D.bcsymbolmap", false),
-					("Build/iOS/D66A4E3C-FAB4-38A5-9863-D1A27A5C4B41.bcsymbolmap", false),
-					("Build/iOS/86E1998A-CF88-316A-87F7-EED06C281067.bcsymbolmap", false),
-					("Build/.TestFramework2.version", false),
-					("Build/.TestFramework1.version", false),
-				]
-
-				let expectedItems = Set(expectedPaths.map {
-					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
-				})
-
-				expect(Set(removedItems)) == expectedItems
-			}
-
-			it("should successfully remove old frameworks when the library changes dynamic framework to static framework") {
-				let directoryURL = baseDirectoryURL.appendingPathComponent("RemoveDynamic", isDirectory: true)
-				let project = Project(directoryURL: directoryURL)
-				var events = [ProjectEvent]()
-				project.projectEvents.observeValues { events.append($0) }
-
-				expect(project.removeUnneededItems().wait().error).to(beNil())
-
-				let removedItems = events.compactMap { event -> URL? in
-					guard case let .removingUnneededItem(url) = event else {
-						fail()
-						return nil
-					}
-					return url
-				}
-
-				let expectedPaths = [
-					("Build/Mac/TestFramework.framework.dSYM", true),
-					("Build/iOS/TestFramework.framework.dSYM", true),
-					("Build/Mac/TestFramework.framework", true),
-					("Build/iOS/TestFramework.framework", true),
-					("Build/iOS/51899E2B-87E1-3129-97D2-C8FEECF71698.bcsymbolmap", false),
-					("Build/iOS/B730142E-39F3-3EB2-A826-4043D39695EE.bcsymbolmap", false),
-				]
-
-				let expectedItems = Set(expectedPaths.map {
-					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
-				})
-
-				expect(Set(removedItems)) == expectedItems
-			}
-
-			it("should successfully remove static frameworks") {
-				let directoryURL = baseDirectoryURL.appendingPathComponent("StaticFramework", isDirectory: true)
-				let project = Project(directoryURL: directoryURL)
-				var events = [ProjectEvent]()
-				project.projectEvents.observeValues { events.append($0) }
-
-				expect(project.removeUnneededItems().wait().error).to(beNil())
-
-				let removedItems = events.compactMap { event -> URL? in
-					guard case let .removingUnneededItem(url) = event else {
-						fail()
-						return nil
-					}
-					return url
-				}
-
-				let expectedPaths = [
-					("Build/Mac/Static/TestFramework.framework", true),
-					("Build/iOS/Static/TestFramework.framework", true),
-					("Checkouts/TestFramework", true),
-					("Build/.TestFramework.version", false),
-				]
-
-				let expectedItems = Set(expectedPaths.map {
-					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
-				})
-
-				expect(Set(removedItems)) == expectedItems
-			}
-
-			it("should successfully if there is a lack of a framework") {
-				let directoryURL = baseDirectoryURL.appendingPathComponent("PlatformUsed", isDirectory: true)
-				let project = Project(directoryURL: directoryURL)
-				var events = [ProjectEvent]()
-				project.projectEvents.observeValues { events.append($0) }
-
-				expect(project.removeUnneededItems().wait().error).to(beNil())
-
-				let removedItems = events.compactMap { event -> URL? in
-					guard case let .removingUnneededItem(url) = event else {
-						fail()
-						return nil
-					}
-					return url
-				}
-
-				let expectedPaths = [
-					("Build/iOS/TestFramework2.framework.dSYM", true),
-					("Build/iOS/TestFramework1.framework.dSYM", true),
-					("Build/iOS/TestFramework2.framework", true),
-					("Build/iOS/TestFramework1.framework", true),
-					("Checkouts/TestFramework1", true),
-					("Checkouts/TestFramework2", true),
-					("Build/iOS/59F47BB3-1D4F-3B7F-A0D3-273E2F5B9526.bcsymbolmap", false),
-					("Build/iOS/1047B36A-DF55-31AE-B619-D457C836A39D.bcsymbolmap", false),
-					("Build/iOS/D66A4E3C-FAB4-38A5-9863-D1A27A5C4B41.bcsymbolmap", false),
-					("Build/iOS/86E1998A-CF88-316A-87F7-EED06C281067.bcsymbolmap", false),
-					("Build/.TestFramework2.version", false),
-					("Build/.TestFramework1.version", false),
-				]
-
-				let expectedItems = Set(expectedPaths.map {
-					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
-				})
-
-				expect(Set(removedItems)) == expectedItems
 			}
 		}
 

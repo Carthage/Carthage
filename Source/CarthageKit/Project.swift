@@ -1,5 +1,6 @@
 // swiftlint:disable file_length
 
+import CommonCrypto
 import Foundation
 import Result
 import ReactiveSwift
@@ -47,9 +48,6 @@ public enum ProjectEvent {
 
 	/// Building an uncached project.
 	case buildingUncached(Dependency)
-
-	/// Removing unused packages
-	case removingUnneededItem(URL)
 }
 
 extension ProjectEvent: Equatable {
@@ -103,6 +101,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
+
+	/// Whether to use authentication credentials from ~/.netrc file
+	/// to download binary only frameworks.
+	public var useNetrc = false
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -237,7 +239,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 				} else {
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
 
-					return URLSession.shared.reactive.data(with: URLRequest(url: binary.url))
+					let request = self.buildURLRequest(for: binary.url, useNetrc: self.useNetrc)
+					return URLSession.proxiedSession.reactive.data(with: request)
 						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data).mapError { error in
@@ -250,6 +253,29 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 			}
 			.startOnQueue(self.cachedBinaryProjectsQueue)
+	}
+
+
+	/// Builds URL request
+	///
+	/// - Parameters:
+	///   - url: a url that identifies the location of a resource
+	///   - useNetrc: determines whether to use credentials from `~/.netrc` file
+	/// - Returns: a URL request
+	private func buildURLRequest(for url: URL, useNetrc: Bool) -> URLRequest {
+		var request = URLRequest(url: url)
+		guard useNetrc else { return request }
+
+		// When downloading a binary, `carthage` will take into account the user's
+		// `~/.netrc` file to determine authentication credentials
+		switch Netrc.load() {
+		case let .success(netrc):
+			if let authorization = netrc.authorization(for: url) {
+				request.addValue(authorization, forHTTPHeaderField: "Authorization")
+			}
+		case .failure(_): break // Do nothing
+		}
+		return request
 	}
 
 	/// Sends all versions available for the given project.
@@ -574,21 +600,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate, buildOptions: buildOptions) : .empty)
 	}
 
-	/// Constructs the file:// URL at which a given .framework
+	/// Constructs the file:// URL at which a given .framework or .xcframework
 	/// will be found. Depends on the location of the current project.
 	private func frameworkURLInCarthageBuildFolder(
-		forPlatform platform: Platform,
+		forSDK sdk: SDK,
 		frameworkNameAndExtension: String
 	) -> Result<URL, CarthageError> {
-		guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
-			lastComponent == "framework" else {
-				return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
-		}
-
-		guard let destinationURLInWorkingDir = platform
+		guard let destinationURLInWorkingDir = sdk
 			.relativeURL?
 			.appendingPathComponent(frameworkNameAndExtension, isDirectory: true) else {
-				return .failure(.internalError(description: "failed to construct framework destination url from \(platform) and \(frameworkNameAndExtension)"))
+				return .failure(.internalError(description: "failed to construct framework destination url from \(sdk.platformSimulatorlessFromHeuristic) and \(frameworkNameAndExtension)"))
 		}
 
 		return .success(self
@@ -649,9 +670,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.merge) { frameworksUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return SignalProducer<URL, CarthageError>(frameworksUrls)
 							.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
-								return platformForFramework(url)
-									.attemptMap { self.frameworkURLInCarthageBuildFolder(forPlatform: $0,
-																				 frameworkNameAndExtension: url.lastPathComponent) }
+								return self.getBinaryFrameworkURL(url: url)
 							}
 							.collect()
 							.flatMap(.merge) { destinationUrls -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
@@ -668,8 +687,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					// Check if the framework are compatible with the current Swift version
 					.flatMap(.merge) { pair -> SignalProducer<SourceURLAndDestinationURL, CarthageError> in
 						return checkFrameworkCompatibility(pair.frameworkSourceURL, usingToolchain: toolchain)
-							.mapError { error in CarthageError.internalError(description: error.description) }
-							.reduce(into: pair) { (_, _) = ($0.1, $1) }
+							.then(SignalProducer(value: pair))
 					}
 					// If the framework is compatible copy it over to the destination folder in Carthage/Build
 					.flatMap(.merge) { pair -> SignalProducer<URL, CarthageError> in
@@ -679,6 +697,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					// Copy .dSYM & .bcsymbolmap too
 					.flatMap(.merge) { frameworkDestinationURL -> SignalProducer<URL, CarthageError> in
+						guard frameworkDestinationURL.pathExtension != "xcframework" else {
+							// xcframeworks have embedded debug information which is not copied out.
+							return SignalProducer(value: frameworkDestinationURL)
+						}
 						return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
 							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
 							.then(SignalProducer(value: frameworkDestinationURL))
@@ -697,6 +719,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
+    /// Ensures binary framework has a valid extension and returns url in build folder
+	private func getBinaryFrameworkURL(url: URL) -> SignalProducer<URL, CarthageError> {
+		switch url.pathExtension {
+			case "xcframework":
+				return SignalProducer<URL, CarthageError>(value: url)
+					.map { self.directoryURL.appendingPathComponent(Constants.binariesFolderPath).appendingPathComponent($0.lastPathComponent) }
+			default:
+				return platformForFramework(url)
+					.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
+																		 frameworkNameAndExtension: url.lastPathComponent) }
+		}
+	}
+
 	/// Removes the file located at the given URL
 	///
 	/// Sends empty value on successful removal
@@ -709,11 +744,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, preferXCFrameworks: Bool, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
-			return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
+			return self.downloadMatchingBinaries(
+				for: dependency,
+				pinnedVersion: pinnedVersion,
+				fromRepository: repository,
+				preferXCFrameworks: preferXCFrameworks,
+				client: client
+			)
 				.flatMapError { error -> SignalProducer<URL, CarthageError> in
 					if !client.isAuthenticated {
 						return SignalProducer(error: error)
@@ -722,6 +763,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						for: dependency,
 						pinnedVersion: pinnedVersion,
 						fromRepository: repository,
+						preferXCFrameworks: preferXCFrameworks,
 						client: Client(server: server, isAuthenticated: false)
 					)
 				}
@@ -751,6 +793,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		for dependency: Dependency,
 		pinnedVersion: PinnedVersion,
 		fromRepository repository: Repository,
+		preferXCFrameworks: Bool,
 		client: Client
 	) -> SignalProducer<URL, CarthageError> {
 		return client.execute(repository.release(forTag: pinnedVersion.commitish))
@@ -777,13 +820,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 				self._projectEventsObserver.send(value: .downloadingBinaries(dependency, release.nameWithFallback))
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
-				return SignalProducer<Release.Asset, CarthageError>(release.assets)
-					.filter { asset in
-						if asset.name.range(of: Constants.Project.binaryAssetPattern) == nil {
-							return false
-						}
-						return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
-					}
+				let potentialFrameworkAssets = release.assets.filter { asset in
+					let matchesContentType = Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+					let matchesName = asset.name.contains(Constants.Project.frameworkBinaryAssetPattern) || asset.name.contains(Constants.Project.xcframeworkBinaryAssetPattern)
+					return matchesContentType && matchesName
+				}
+				return SignalProducer<Release.Asset, CarthageError>(binaryAssetFilter(prioritizing: potentialFrameworkAssets, preferXCFrameworks: preferXCFrameworks))
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
 
@@ -838,56 +880,50 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutDependency(
+	private func checkoutOrCloneDependency(
 		_ dependency: Dependency,
 		version: PinnedVersion,
 		submodulesByPath: [String: Submodule]
 	) -> SignalProducer<(), CarthageError> {
 		let revision = version.commitish
-		let repositoryURL = repositoryFileURL(for: dependency)
+		return cloneOrFetchDependency(dependency, commitish: revision)
+			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
+				let workingDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 
-		let producer = { () -> SignalProducer<(), CarthageError> in
-			let workingDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+				/// The submodule for an already existing submodule at dependency project’s path
+				/// or the submodule to be added at this path given the `--use-submodules` flag.
+				let submodule: Submodule?
 
-			/// The submodule for an already existing submodule at dependency project’s path
-			/// or the submodule to be added at this path given the `--use-submodules` flag.
-			let submodule: Submodule?
+				if var foundSubmodule = submodulesByPath[dependency.relativePath] {
+					foundSubmodule.url = dependency.gitURL(preferHTTPS: self.preferHTTPS)!
+					foundSubmodule.sha = revision
+					submodule = foundSubmodule
+				} else if self.useSubmodules {
+					submodule = Submodule(name: dependency.relativePath, path: dependency.relativePath, url: dependency.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
+				} else {
+					submodule = nil
+				}
 
-			if var foundSubmodule = submodulesByPath[dependency.relativePath] {
-				foundSubmodule.url = dependency.gitURL(preferHTTPS: self.preferHTTPS)!
-				foundSubmodule.sha = revision
-				submodule = foundSubmodule
-			} else if self.useSubmodules {
-				submodule = Submodule(name: dependency.relativePath, path: dependency.relativePath, url: dependency.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
-			} else {
-				submodule = nil
+				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
+
+				if let submodule = submodule {
+					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
+					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
+						.startOnQueue(self.gitOperationQueue)
+						.then(symlinkCheckoutPaths)
+				} else {
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
+						.then(symlinkCheckoutPaths)
+						.then(
+							submodulesInRepository(repositoryURL, revision: revision)
+								.flatMap(.merge) {
+									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
+								}
+						)
+				}
 			}
-
-			let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
-
-			if let submodule = submodule {
-				// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
-				// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-				return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
-					.startOnQueue(self.gitOperationQueue)
-					.then(symlinkCheckoutPaths)
-			} else {
-				return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, force: true, revision: revision)
-					// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
-					.then(symlinkCheckoutPaths)
-					.then(
-						submodulesInRepository(repositoryURL, revision: revision)
-							.flatMap(.concat) { (submodule) in
-								return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL, cacheURLMap: { (gitURL: GitURL) in
-									let dependency = Dependency.git(gitURL)
-									return repositoryFileURL(for: dependency)
-								})
-							}
-					)
-			}
-		}
-
-		return producer()
 			.on(started: {
 				self._projectEventsObserver.send(value: .checkingOut(dependency, revision))
 			})
@@ -934,121 +970,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
-	public func removeUnneededItems() -> SignalProducer<(), CarthageError> {
-		let binariesDirectoryURL = self.directoryURL
-			.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
-			.resolvingSymlinksInPath()
-
-		return loadResolvedCartfile()
-			.flatMap(.merge) { resolved -> SignalProducer<Dependency, CarthageError> in
-				return SignalProducer(resolved.dependencies.keys)
-			}
-			.flatMap(.merge) { dependency -> SignalProducer<(checkoutURL: URL, versionFileURL: URL, binaryURLs: [URL]), CarthageError> in
-				let checkoutURL = self.directoryURL
-					.appendingPathComponent(dependency.relativePath, isDirectory: true)
-					.resolvingSymlinksInPath()
-
-				let versionFileURL = VersionFile
-					.url(for: dependency, rootDirectoryURL: self.directoryURL)
-					.resolvingSymlinksInPath()
-
-				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
-					.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
-						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
-						return BuildSettings.load(with: buildArguments)
-					}
-					.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String), CarthageError> in
-						return SignalProducer(settings.wrapperName).map { (settings, $0) }
-					}
-					.flatMap(.concat) { settings, wrapperName -> SignalProducer<(URL, isStatic: Bool), CarthageError> in
-						settings.buildSDKs.map { sdk -> (URL, isStatic: Bool) in
-							let url = settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
-								.appendingPathComponent(wrapperName)
-							let isStatic = settings.frameworkType.value.flatMap { $0 } == .static
-							return (url, isStatic)
-						}
-					}
-
-				return frameworkURLs.flatMap(.concurrent(limit: 4)) { frameworkURL, isStatic -> SignalProducer<URL, CarthageError> in
-						let framework = SignalProducer<URL, CarthageError>(value: frameworkURL)
-
-						if isStatic {
-							return framework
-						}
-
-						let bcSymbolMaps = BCSymbolMapsForFramework(frameworkURL)
-							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
-						let dSYMs = dSYMForFramework(frameworkURL, inDirectoryURL: frameworkURL.deletingLastPathComponent())
-							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
-						return .merge(framework, bcSymbolMaps, dSYMs)
-					}
-					.collect()
-					.map { (checkoutURL, versionFileURL, $0) }
-			}
-			.collect()
-			.map { urls -> (checkoutURLs: Set<URL>, versionFileURLs: Set<URL>, binaryURLs: Set<URL>) in
-				var checkoutURLSet: Set<URL> = []
-				var versionFileURLSet: Set<URL> = []
-				var binaryURLSet: Set<URL> = []
-
-				for (checkoutURL, versionFileURL, binaryURLs) in urls {
-					checkoutURLSet.insert(checkoutURL)
-					versionFileURLSet.insert(versionFileURL)
-					binaryURLSet.formUnion(binaryURLs)
-				}
-
-				return (checkoutURLSet, versionFileURLSet, binaryURLSet)
-			}
-			.flatMap(.merge) { checkoutURLs, versionFileURLs, binaryURLs -> SignalProducer<URL, CarthageError> in
-				let fileManager = FileManager.default
-
-				var urls: [URL] = []
-				urls += (try? fileManager
-					.contentsOfDirectory(
-						at: self.directoryURL.appendingPathComponent(Constants.checkoutsFolderPath, isDirectory: true),
-						includingPropertiesForKeys: nil
-					)
-					.map { $0.resolvingSymlinksInPath() }
-					.filter { !checkoutURLs.contains($0) }) ?? []
-
-				urls += (try? fileManager
-					.contentsOfDirectory(
-						at: self.directoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true),
-						includingPropertiesForKeys: nil
-					)
-					.map { $0.resolvingSymlinksInPath() }
-					.filter { $0.pathExtension == VersionFile.pathExtension &&
-						!versionFileURLs.contains($0) }) ?? []
-
-				urls += Platform.supportedPlatforms
-					.flatMap { platform -> [URL] in
-						(try? fileManager
-							.contentsOfDirectory(
-								at: self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true),
-								includingPropertiesForKeys: nil
-							)
-							.filter { !binaryURLs.contains($0) && $0.lastPathComponent != FrameworkType.staticFolderName }) ?? []
-					}
-
-				urls += Platform.supportedPlatforms
-					.flatMap { platform -> [URL] in
-						(try? fileManager
-							.contentsOfDirectory(
-								at: self.directoryURL
-									.appendingPathComponent(platform.relativePath, isDirectory: true)
-									.appendingPathComponent(FrameworkType.staticFolderName, isDirectory: true),
-								includingPropertiesForKeys: nil
-							)
-							.filter { !binaryURLs.contains($0) }) ?? []
-					}
-
-				return SignalProducer(Set(urls))
-			}
-			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
-			.flatMap(.merge, self.removeItem(at:))
-			.then(SignalProducer<(), CarthageError>.empty)
-		}
-
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
 	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil, buildOptions: BuildOptions?) -> SignalProducer<(), CarthageError> {
@@ -1079,24 +1000,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
-							return self.cloneOrFetchDependency(dependency, commitish: version.commitish)
-								.then(SignalProducer<(), CarthageError>.empty)
+							return self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
 						case .binary:
 							return .empty
 						}
 					}
-					// The checkoutDependency operation may clone or fetch submodules that are the same as some dependencies,
-					// so it should run after cloneOrFetchDependency to prevent conflict.
-					.then(SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
-						.flatMap(.concat) { (dependency, version) -> SignalProducer<(), CarthageError> in
-							switch dependency {
-							case .git, .gitHub:
-								return self.checkoutDependency(dependency, version: version, submodulesByPath: submodulesByPath)
-							case .binary:
-								return .empty
-							}
-						}
-					)
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
@@ -1105,35 +1013,44 @@ public final class Project { // swiftlint:disable:this type_body_length
 		binary: BinaryURL,
 		pinnedVersion: PinnedVersion,
 		projectName: String,
-		toolchain: String?
+		toolchain: String?,
+		preferXCFrameworks: Bool
 	) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
 			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
-			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
-				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
-					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
+			.flatMap(.concat) { semanticVersion, binaryProject -> SignalProducer<(SemanticVersion, URL), CarthageError> in
+				guard let frameworkURLs = binaryProject.versions[pinnedVersion] else {
+					return SignalProducer(error: CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
 				}
-
-				return .success((semanticVersion, frameworkURL))
+				
+				let urlsAndVersions = binaryAssetFilter(prioritizing: frameworkURLs, preferXCFrameworks: preferXCFrameworks)
+					.map { (semanticVersion, $0) }
+				
+				return SignalProducer(urlsAndVersions)
 			}
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain) }
+			.flatMap(.concat) { zipFile in
+				self.unarchiveAndCopyBinaryFrameworks(zipFile: zipFile, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain)
+ 					.on(failed: { _ in
+						try? FileManager.default.removeItem(at: zipFile)
+					})
+			}
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
 	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
-		let fileName = url.lastPathComponent
-		let fileURL = fileURLToCachedBinaryDependency(dependency, version, fileName)
+		let fileURL = downloadURLToCachedBinaryDependency(dependency, version, url)
 
 		if FileManager.default.fileExists(atPath: fileURL.path) {
 			return SignalProducer(value: fileURL)
 		} else {
-			return URLSession.shared.reactive.download(with: URLRequest(url: url))
+			let request = self.buildURLRequest(for: url, useNetrc: self.useNetrc)
+			return URLSession.proxiedSession.reactive.download(with: request)
 				.on(started: {
 					self._projectEventsObserver.send(value: .downloadingBinaries(dependency, version.description))
 				})
@@ -1276,12 +1193,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 							guard options.useBinaries else {
 								return .empty
 							}
-							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
+							return self.installBinaries(for: dependency, pinnedVersion: version, preferXCFrameworks: options.useXCFrameworks, toolchain: options.toolchain)
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}
 						case let .binary(binary):
-							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
+							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain, preferXCFrameworks: options.useXCFrameworks)
 								.then(.init(value: (dependency, version)))
 						}
 					}
@@ -1422,9 +1339,21 @@ private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release,
 }
 
 /// Constructs a file URL to where the binary only framework download should be cached
-private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ fileName: String) -> URL {
-	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework.zip
-	return Constants.Dependency.assetsURL.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)")
+private func downloadURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ url: URL) -> URL {
+	let urlBytes = url.absoluteString.utf8CString
+	var digest = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
+	_ = digest.withUnsafeMutableBytes { buffer in
+		urlBytes.withUnsafeBytes { data in
+			CC_SHA256(data.baseAddress!, CC_LONG(urlBytes.count), buffer)
+		}
+	}
+	let hexDigest = digest.map { String(format: "%02hhx", $0) }.joined()
+	let fileName = url.deletingPathExtension().lastPathComponent
+	let fileExtension = url.pathExtension
+
+	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework-578d2a1e3a62983f70dfd8d0b04531b77615cc381edd603813657372d40a8fa1.zip
+	return Constants.Dependency.assetsURL
+		.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)-\(hexDigest).\(fileExtension)")
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
@@ -1484,7 +1413,7 @@ private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = n
 }
 
 /// Sends the platform specified in the given Info.plist.
-func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
+func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
@@ -1544,17 +1473,18 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
 		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
-		.attemptMap { platform in SDK.from(string: platform).map { $0.platform } }
+		.map { SDK(name: $0, simulatorHeuristic: "") }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
 internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
+		.concat(filesInDirectory(directoryURL, "com.apple.xcframework"))
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
-				return (pathComponent as NSString).pathExtension == "framework"
+				return ["framework", "xcframework"].contains((pathComponent as NSString).pathExtension)
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in
@@ -1564,7 +1494,7 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 			let packageType: PackageType? = bundle?.packageType
 
 			switch packageType {
-			case .framework?, .bundle?:
+			case .xcframework?, .framework?, .bundle?:
 				return true
 			default:
 				// In case no Info.plist exists check the Mach-O fileType
@@ -1587,8 +1517,8 @@ internal func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, Carth
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
-/// Sends the URL of the dSYM for which at least one of the UUIDs are common with 
-/// those of the given framework, or errors if there was an error parsing a dSYM 
+/// Sends the URL of the dSYM for which at least one of the UUIDs are common with
+/// those of the given framework, or errors if there was an error parsing a dSYM
 /// contained within the directory.
 private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
@@ -1670,25 +1600,107 @@ public func cloneOrFetch(
 	destinationURL: URL = Constants.Dependency.repositoriesURL,
 	commitish: String? = nil
 ) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
+	let fileManager = FileManager.default
+	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
+
 	return SignalProducer {
 			Result(at: destinationURL, attempt: {
-				try FileManager.default.createDirectory(at: $0, withIntermediateDirectories: true)
+				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
+				return dependency.gitURL(preferHTTPS: preferHTTPS)!
 			})
 		}
-		.flatMap(.merge) { () -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-			let remoteURL = dependency.gitURL(preferHTTPS: preferHTTPS)!
-			let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
+		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+			return isGitRepository(repositoryURL)
+				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+					if isRepository {
+						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
+							guard FetchCache.needsFetch(forURL: remoteURL) else {
+								return SignalProducer(value: (nil, repositoryURL))
+							}
 
-			return cloneOrFetch(remoteURL: remoteURL, to: repositoryURL, isBare: true, commitish: commitish)
-				.map { (cloneOrFetch) -> (ProjectEvent?, URL) in
-					switch cloneOrFetch {
-					case .none:
-						return (nil, repositoryURL)
-					case .some(.cloning):
-						return (.cloning(dependency), repositoryURL)
-					case .some(.fetching):
-						return (.fetching(dependency), repositoryURL)
+							return SignalProducer(value: (.fetching(dependency), repositoryURL))
+								.concat(
+									fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
+								)
+						}
+
+						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
+						if let commitish = commitish {
+							return SignalProducer.zip(
+									branchExistsInRepository(repositoryURL, pattern: commitish),
+									commitExistsInRepository(repositoryURL, revision: commitish)
+								)
+								.flatMap(.concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+									// If the given commitish is a branch, we should fetch.
+									if branchExists || !commitExists {
+										return fetchProducer()
+									} else {
+										return SignalProducer(value: (nil, repositoryURL))
+									}
+								}
+						} else {
+							return fetchProducer()
+						}
+					} else {
+						// Either the directory didn't exist or it did but wasn't a git repository
+						// (Could happen if the process is killed during a previous directory creation)
+						// So we remove it, then clone
+						_ = try? fileManager.removeItem(at: repositoryURL)
+						return SignalProducer(value: (.cloning(dependency), repositoryURL))
+							.concat(
+								cloneRepository(remoteURL, repositoryURL)
+									.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
+							)
 					}
 				}
 		}
 }
+
+private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8) {
+	let priorities: KeyValuePairs = [".xcframework": 10 as UInt8, ".XCFramework": 10, ".XCframework": 10, ".framework": 40]
+	
+	for (pathExtension, priority) in priorities {
+		var (potentialPatternRange, keyName) = (assetName.range(of: pathExtension), assetName)
+		guard let patternRange = potentialPatternRange else { continue }
+		keyName.removeSubrange(patternRange)
+		return (keyName, priority)
+	}
+
+	// If we can't tell whether this is a framework or an xcframework, return it with a low priority.
+	return (assetName, 70)
+}
+
+/**
+Given a list of known assets for a release, parses asset names to identify XCFramework assets, and returns which assets should be downloaded.
+
+For example:
+```
+>>> binaryAssetFilter(
+		prioritizing: [Foo.xcframework.zip, Foo.framework.zip, Bar.framework.zip],
+		preferXCFrameworks: true
+	)
+[Foo.xcframework.zip, Bar.framework.zip]
+```
+*/
+private func binaryAssetFilter<A: AssetNameConvertible>(prioritizing assets: [A], preferXCFrameworks: Bool) -> [A] {
+	let bestPriorityAssetsByKey = assets.reduce(into: [:] as [String: [A: UInt8]]) { assetNames, asset in
+		if asset.name.lowercased().contains(".xcframework") && !preferXCFrameworks {
+			// Skip assets that look like xcframework when --use-xcframeworks is not passed.
+			return
+		}
+		let (key, priority) = binaryAssetPrioritization(forName: asset.name)
+		let assetPriorities = assetNames[key, default: [:]].merging([asset: priority], uniquingKeysWith: min)
+		let bestPriority = assetPriorities.values.min()!
+		assetNames[key] = assetPriorities.filter { $1 == bestPriority }
+	}
+	return bestPriorityAssetsByKey.values.flatMap { $0.keys }
+}
+
+private protocol AssetNameConvertible: Hashable {
+	var name: String { get }
+}
+extension URL: AssetNameConvertible {
+	var name: String { return lastPathComponent }
+}
+extension Release.Asset: AssetNameConvertible {}

@@ -7,7 +7,7 @@ INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
 
 CARTHAGE_EXECUTABLE=./.build/release/carthage
-BINARIES_FOLDER=/usr/local/bin
+BINARIES_FOLDER=$(PREFIX)/bin
 
 SWIFT_BUILD_FLAGS=--configuration release -Xswiftc -suppress-warnings
 
@@ -32,6 +32,10 @@ RM=rm -f
 MKDIR=mkdir -p
 SUDO=sudo
 CP=cp
+
+ifdef DISABLE_SUDO
+override SUDO:=
+endif
 
 .PHONY: all clean install package test uninstall xcconfig xcodeproj
 
@@ -68,10 +72,11 @@ package: installables
 	   	"$(OUTPUT_PACKAGE)"
 
 prefix_install: installables
-	$(MKDIR) "$(PREFIX)/bin"
-	$(CP) -f "$(CARTHAGE_EXECUTABLE)" "$(PREFIX)/bin/"
+	$(MKDIR) "$(BINARIES_FOLDER)"
+	$(CP) -f "$(CARTHAGE_EXECUTABLE)" "$(BINARIES_FOLDER)/"
 
 install: installables
+	if [ ! -d "$(BINARIES_FOLDER)" ]; then $(SUDO) $(MKDIR) "$(BINARIES_FOLDER)"; fi
 	$(SUDO) $(CP) -f "$(CARTHAGE_EXECUTABLE)" "$(BINARIES_FOLDER)"
 
 uninstall:

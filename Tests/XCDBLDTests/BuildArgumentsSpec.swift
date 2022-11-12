@@ -66,7 +66,9 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs.subtracting([.macOSX]) {
+				let macosx = SDK.knownIn2019YearSDKs.first(where: { $0.rawValue == "macosx" })!
+
+				for sdk in SDK.knownIn2019YearSDKs.subtracting([macosx]) {
 					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { subject in
 						subject.sdk = sdk
 					}
@@ -79,7 +81,7 @@ class BuildArgumentsSpec: QuickSpec {
 				// for macOS already, just let xcodebuild figure out the SDK on its
 				// own.
 				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { subject in
-					subject.sdk = .macOSX
+					subject.sdk = macosx
 				}
 			}
 
