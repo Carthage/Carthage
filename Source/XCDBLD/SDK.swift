@@ -89,6 +89,7 @@ public struct SDK: Hashable {
 	/// - Returns: The name with correct titlecasing, an array of aliases, and a
 	///            hardcoded `simulatorHeuristic` · all keyed by lowercased `name`.
 	/// - Note: The aliases are intended to be matched case-insensitevly.
+    /// - Seealso: `xcrun xcodebuild -showsdks`
 	private static let knownIn2019YearDictionary: [String: (String, [String], String)] =
 		([
 			"MacOSX": (["macOS", "Mac", "OSX", "macCatalyst"], "macOS"),
@@ -98,6 +99,8 @@ public struct SDK: Hashable {
 			"WatchSimulator": (["watchOS Simulator", "watchsimulator"], "Simulator - watchOS"),
 			"AppleTVOS": (["tvOS"], "tvOS"),
 			"AppleTVSimulator": (["tvOS Simulator", "appletvsimulator", "tvsimulator"], "Simulator - tvOS"),
+            "XROS": (["xrOS", "visionOS"], "xrOS"),
+            "XRSimulator": (["xrOS Simulator"], "Simulator - xrOS"),
 		] as KeyValuePairs).reduce(into: [:]) {
 			$0[$1.0.lowercased()] = ($1.0, $1.1.0, $1.1.1)
 		}
@@ -232,6 +235,8 @@ extension SDK {
         case ("watchsimulator", nil): return "generic/platform=watchOS Simulator"
         case ("appletvos", nil): return "generic/platform=tvOS"
         case ("appletvsimulator", nil): return "generic/platform=tvOS Simulator"
+        case ("xros", nil): return "generic/platform=visionOS"
+        case ("xrsimulator", nil): return "generic/platform=visionOS Simulator"
             
         default:
             return nil
