@@ -43,9 +43,9 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		let devices = jsonObject["devices"] else {
 		return nil
 	}
-	let platformName = sdk.platformSimulatorlessFromHeuristic
+
 	func reducePlatformNames(_ result: inout [String: [Simulator]], _ entry: (key: String, value: [Simulator])) {
-		guard let platformVersion = parsePlatformVersion(for: platformName, from: entry.key) else { return }
+		guard let platformVersion = parsePlatformVersion(for: sdk.simulatorJsonKeyUnderDevicesDictQuery, from: entry.key) else { return }
 		guard entry.value.contains(where: { $0.isAvailable }) else { return }
 		result[platformVersion] = entry.value
 	}

@@ -541,7 +541,7 @@ public func createVersionFileForCommitish(
 					cachedFramework = CachedFramework(name: frameworkName, container: nil, libraryIdentifier: nil, hash: hash, linking: linking, swiftToolchainVersion: frameworkSwiftVersion)
 				case .xcframework(name: let container, libraryIdentifier: let identifier):
 					let targetOS = identifier.components(separatedBy: "-")[0]
-					platformName = SDK.associatedSetOfKnownIn2019YearSDKs(targetOS).first?.platformSimulatorlessFromHeuristic
+					platformName = SDK.associatedSetOfKnownIn2023YearSDKs(targetOS).first?.platformSimulatorlessFromHeuristic
 					cachedFramework = CachedFramework(name: frameworkName, container: container, libraryIdentifier: identifier, hash: hash, linking: nil, swiftToolchainVersion: frameworkSwiftVersion)
 				}
 				if let platformName = platformName, var frameworks = platformCaches[platformName] {
