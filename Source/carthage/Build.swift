@@ -239,7 +239,7 @@ extension BuildPlatform: ArgumentProtocol {
 
 			guard set.isDisjoint(with: ["all"]) else { throw CocoaError(.keyValueValidation) /* because not solely `all` */ }
 
-			let values = try set.lazy.map(SDK.associatedSetOfKnownIn2019YearSDKs).reduce(into: [] as Set<SDK>) {
+			let values = try set.lazy.map(SDK.associatedSetOfKnownIn2023YearSDKs).reduce(into: [] as Set<SDK>) {
 				guard $1.isEmpty == false else { throw CocoaError(.keyValueValidation) }
 				$0.formUnion($1)
 			}

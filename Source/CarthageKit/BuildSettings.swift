@@ -366,7 +366,7 @@ extension SDK {
 	/// - Note: As last ditch effort, try inside `/Applications/Xcode.app`, which might not exist.
 	/// - Note: Mostly, `xcodebuild -showsdks -json`-based `XCDBLD.SDK`s will be grabbed instead of
 	///         this signal reaching completion.
-	/// - Note: Will, where possible, draw from `SDK.knownIn2019YearSDKs` for 2019-era captialization.
+	/// - Note: Will, where possible, draw from `SDK.knownIn2023YearSDKs` for 2023-era captialization.
 	static let setFromFallbackXcodeprojBuildSettings: SignalProducer<Set<SDK>?, NoError> =
 		Task("/usr/bin/xcrun", arguments: ["--find", "xcodebuild"], environment: Environment.withoutActiveXcodeXCConfigFile)
 			.launch()
@@ -405,13 +405,13 @@ extension SDK {
 extension SDK {
 	/// - See: `SDK.setFromJSONShowSDKs`
 	/// - Note: Fallbacks are `SDK.setFromFallbackXcodeprojBuildSettings` and
-	///         hardcoded `SDK.knownIn2019YearSDKs`.
+	///         hardcoded `SDK.knownIn2023YearSDKs`.
 	static let setsFromJSONShowSDKsWithFallbacks: SignalProducer<Set<SDK>, NoError> =
 		SDK.setFromJSONShowSDKs
 			.concat(SDK.setFromFallbackXcodeprojBuildSettings)
 			.skip(while: { $0 == nil })
 			.take(first: 1)
 			.skipNil()
-			.reduce(into: SDK.knownIn2019YearSDKs) { $0 = $1 }
+			.reduce(into: SDK.knownIn2023YearSDKs) { $0 = $1 }
 			.replayLazily(upTo: 1)
 }

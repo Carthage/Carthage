@@ -73,7 +73,7 @@ public struct ArchiveCommand: CommandProtocol {
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
 			// TODO: Better warning/planning for compressing up archives with non-known-in-year-2019 platforms.
 			// NOTE: as of current, non-known-in-year-2019 platforms are not compressed and copied by this command.
-			return SignalProducer<SDK, CarthageError>(SDK.knownIn2019YearSDKs)
+			return SignalProducer<SDK, CarthageError>(SDK.knownIn2023YearSDKs)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(frameworks).map { framework in
 						return (platform.relativePath as NSString).appendingPathComponent(framework)

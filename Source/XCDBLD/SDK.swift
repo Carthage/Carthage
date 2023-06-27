@@ -44,6 +44,14 @@ public struct SDK: Hashable {
 		return lhs.rawValue == rhs.rawValue
 	}
 
+	public var simulatorJsonKeyUnderDevicesDictQuery: String {
+		guard self.simulatorHeuristic != "Simulator - visionOS" else {
+			return "xros"
+		}
+
+		return self.platformSimulatorlessFromHeuristic
+	}
+
 	/// Take `simulatorHeuristic` and (best as possible) derive what used to be `XCDBLD.Platform` from it.
 	/// With data from `xcodebuild -showsdks -json`, should do solid job.
 	public var platformSimulatorlessFromHeuristic: String {
@@ -89,9 +97,27 @@ public struct SDK: Hashable {
 			$0[$1.0.lowercased()] = ($1.0, $1.1.0, $1.1.1)
 		}
 
+	private static let knownIn2023YearDictionary: [String: (String, [String], String)] = CollectionOfOne(
+		([
+			"XROS": (["visionOS"], "visionOS"),
+			"XRSimulator": (["visionOS Simulator", "xrsimulator"], "Simulator - visionOS"),
+		] as KeyValuePairs).reduce(into: [:]) {
+			$0[$1.0.lowercased()] = ($1.0, $1.1.0, $1.1.1)
+		}
+	)
+		.map { knownIn2019YearDictionary.merging($0, uniquingKeysWith: { x, y in y } ) }
+		.first!
+
 	public static let knownIn2019YearSDKs: Set<SDK> =
 		Set(
 			knownIn2019YearDictionary
+				.mapValues { $0.2 }
+				.map(SDK.init)
+		)
+
+	public static let knownIn2023YearSDKs: Set<SDK> =
+		Set(
+			knownIn2023YearDictionary
 				.mapValues { $0.2 }
 				.map(SDK.init)
 		)
@@ -104,17 +130,22 @@ public struct SDK: Hashable {
 			return
 		}
 
-		guard let index = SDK.knownIn2019YearDictionary.index(forKey: rawValue.lowercased()) else { return nil }
+		if rawValue.caseInsensitiveCompare("visionos") == .orderedSame {
+			self.name = "XROS"
+			self.simulatorHeuristic = ""
+			return
+		}
 
-		(self.name, _, self.simulatorHeuristic) = SDK.knownIn2019YearDictionary[index].value
+		guard let index = SDK.knownIn2023YearDictionary.index(forKey: rawValue.lowercased()) else { return nil }
+
+		(self.name, _, self.simulatorHeuristic) = SDK.knownIn2023YearDictionary[index].value
 	}
 
-	public static func associatedSetOfKnownIn2019YearSDKs(_ argumentSubstring: String) -> Set<SDK> {
-		let knownIn2019YearDictionary = SDK.knownIn2019YearDictionary
+	private static func associatedSetOfKnownSDKs(_ argumentSubstring: String, dictionary: [String: (String, [String], String)]) -> Set<SDK> {
 		let potentialSDK = argumentSubstring.lowercased()
 
-		let potentialIndex = knownIn2019YearDictionary.index(forKey: potentialSDK)
-			?? knownIn2019YearDictionary.firstIndex(
+		let potentialIndex = dictionary.index(forKey: potentialSDK)
+			?? dictionary.firstIndex(
 				where: { _, value in
 					value.1.contains { $0.caseInsensitiveCompare(potentialSDK) == .orderedSame }
 				}
@@ -123,14 +154,23 @@ public struct SDK: Hashable {
 		guard let index = potentialIndex else { return Set() }
 
 		return [
-			Optional(knownIn2019YearDictionary[index].value),
-			knownIn2019YearDictionary[knownIn2019YearDictionary[index].key.dropLast(2).appending("simulator")],
-			knownIn2019YearDictionary[knownIn2019YearDictionary[index].key.dropLast(9).appending("os")]
+			Optional(dictionary[index].value),
+			dictionary[dictionary[index].key.dropLast(2).appending("simulator")],
+			dictionary[dictionary[index].key.dropLast(9).appending("os")]
 		]
 			.reduce(into: [] as Set<SDK>) {
 				guard let value = $1 else { return }
 				$0.formUnion([SDK(name: value.0, simulatorHeuristic: value.2)])
 			}
+
+	}
+
+	public static func associatedSetOfKnownIn2023YearSDKs(_ argumentSubstring: String) -> Set<SDK> {
+		return associatedSetOfKnownSDKs(argumentSubstring, dictionary: SDK.knownIn2023YearDictionary)
+	}
+
+	public static func associatedSetOfKnownIn2019YearSDKs(_ argumentSubstring: String) -> Set<SDK> {
+		return associatedSetOfKnownSDKs(argumentSubstring, dictionary: SDK.knownIn2019YearDictionary)
 	}
 }
 
@@ -146,7 +186,7 @@ extension SDK {
 			.materializeResults() // to map below and ignore errors
 			.filterMap { try? JSONSerialization.jsonObject(with: $0.value?.value ?? Data(bytes: []), options: JSONSerialization.ReadingOptions()) as? NSArray ?? NSArray() }
 			.map {
-                $0.compactMap { (nsobject: Any) -> SDK? in
+				$0.compactMap { (nsobject: Any) -> SDK? in
 					let platform = NSString.lowercased(
 						(nsobject as! NSObject).value(forKey: "platform") as? NSString ?? ""
 					)(with: Locale?.none)
@@ -183,7 +223,7 @@ extension SDK {
 						(nsobject as! NSObject).value(forKey: "platformPath") as? NSString ?? "", count: 1
 					).reduce(into: String?.none) { $0 = parseTitleCasePlatform($1.appending("")) }
 
-                    return SDK(name: titleCasedPlatform ?? platform, simulatorHeuristic: simulatorHeuristic)
+					return SDK(name: titleCasedPlatform ?? platform, simulatorHeuristic: simulatorHeuristic)
 				}
 			}
 			.reduce(into: Set<SDK>?.none) {
