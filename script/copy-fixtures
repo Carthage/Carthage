@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/zsh --no-globalrcs --no-rcs
 #
 # Copies fixture projects into the test bundle directly, so they don't have to
 # be added to the Carthage workspace. This avoids confusing Xcode with
 # "subprojects" that are actually just originating from a fixture.
 
-if [[ -z $1 ]]; then
+if [[ -z "$1" ]]; then
     echo "Error: You must pass a destination directory."
     exit 1
 fi
