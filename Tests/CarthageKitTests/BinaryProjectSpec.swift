@@ -69,11 +69,11 @@ class BinaryProjectSpec: QuickSpec {
 			}
 
 			it("should fail with a non-parseable URL") {
-				let jsonData = "{ \"1.0\": \"💩\" }".data(using: .utf8)!
+				let jsonData = "{ \"1.0\": \"https://[].erroneous_square_brackets.example.com/\" }".data(using: .utf8)!
 
 				let actualError = BinaryProject.from(jsonData: jsonData).error
 
-				expect(actualError) == .invalidURL("💩")
+				expect(actualError) == .invalidURL("https://[].erroneous_square_brackets.example.com/")
 			}
 
 			it("should fail with a non HTTPS url") {
