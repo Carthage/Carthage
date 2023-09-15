@@ -456,14 +456,14 @@ class ProjectSpec: QuickSpec {
 				let actualDefinition = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.value
 
 				let expectedBinaryProject = BinaryProject(versions: [
-					PinnedVersion("1.0"): [URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!],
-					PinnedVersion("1.0.1"): [URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!],
+					PinnedVersion("1.0"): [URL(string: "https://example.com/release/1.0.0/framework.zip")!],
+					PinnedVersion("1.0.1"): [URL(string: "https://example.com/release/1.0.1/framework.zip")!],
 				])
 				expect(actualDefinition) == expectedBinaryProject
 			}
 
 			it("should return read failed if unable to download") {
-				let url = URL(string: "file:///thisfiledoesnotexist.json")!
+				let url = URL(string: "file://var/empty/thisfiledoesnotexist.json")!
 				let binary = BinaryURL(url: url, resolvedDescription: testDefinitionURL.description)
 				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
 
