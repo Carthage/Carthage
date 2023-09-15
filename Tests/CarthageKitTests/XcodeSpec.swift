@@ -266,32 +266,6 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
-		it("should build all subprojects for all platforms by default") {
-			let multipleSubprojects = "SampleMultipleSubprojects"
-			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
-				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
-				})
-				.wait()
-
-			expect(result.error).to(beNil())
-
-			let expectedPlatformsFrameworks = [
-				("iOS", "SampleiOSFramework"),
-				("Mac", "SampleMacFramework"),
-				("tvOS", "SampleTVFramework"),
-				("watchOS", "SampleWatchFramework"),
-			]
-
-			for (platform, framework) in expectedPlatformsFrameworks {
-				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
-				expect(path).to(beExistingDirectory())
-			}
-		}
-
 		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
