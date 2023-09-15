@@ -7,6 +7,7 @@ import Tentacle
 import Result
 import ReactiveTask
 import XCDBLD
+import XCTest
 
 // swiftlint:disable:this force_try
 
@@ -31,7 +32,10 @@ class ProjectSpec: QuickSpec {
 					.single()!
 				expect(result.error).to(beNil())
 
-				return result.value!.map { $0.name }
+				if result.value == nil {
+					_ = XCTFail("no result from buildCheckedOutDependenciesWithOptions")
+				}
+				return result.value?.map { $0.name } ?? []
 			}
 
 			func buildDependencyTest(platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
