@@ -14,7 +14,7 @@ private func ==<A: Equatable, B: Equatable>(lhs: [(A, B)], rhs: [(A, B)]) -> Boo
 	return true
 }
 
-private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> Predicate<[(A, B)]> {
+private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> Nimble.Predicate<[(A, B)]> {
 	return Predicate.define("equal <\(stringify(expectedValue))>") { actualExpression, message in
 		let actualValue = try actualExpression.evaluate()
 		if expectedValue == nil || actualValue == nil {

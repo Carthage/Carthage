@@ -464,11 +464,11 @@ class XcodeSpec: QuickSpec {
 
 // MARK: Matcher
 
-internal func stillBeFramework(ofType: FrameworkType) -> Predicate<String> {
+internal func stillBeFramework(ofType: FrameworkType) -> Nimble.Predicate<String> {
 	return beFramework(ofType: ofType)
 }
 
-internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
+internal func beFramework(ofType: FrameworkType) -> Nimble.Predicate<String> {
 	return Predicate { actualExpression in
 		var message = "exist and be a \(ofType == .static ? "static" : "dynamic") type"
 		let actualPath = try actualExpression.evaluate()
@@ -507,7 +507,7 @@ internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 	}
 }
 
-internal func beExistingDirectory() -> Predicate<String> {
+internal func beExistingDirectory() -> Nimble.Predicate<String> {
 	return Predicate { actualExpression in
 		var message = "exist and be a directory"
 		let actualPath = try actualExpression.evaluate()
@@ -532,7 +532,7 @@ internal func beExistingDirectory() -> Predicate<String> {
 	}
 }
 
-internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Predicate<URL> {
+internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Nimble.Predicate<URL> {
 	return Predicate { actualExpression in
 		let message = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()

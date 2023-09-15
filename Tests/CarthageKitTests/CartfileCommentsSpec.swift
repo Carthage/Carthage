@@ -18,7 +18,8 @@ class CarfileCommentsSpec: QuickSpec {
 					"I say \"hello\" you say \"goodbye\"!"
 				]
 				.forEach {
-					expect($0.strippingTrailingCartfileComment) == $0
+					let cartfileStringWithNoTrueComments = $0
+					expect(cartfileStringWithNoTrueComments.strippingTrailingCartfileComment).to(equal(cartfileStringWithNoTrueComments))
 				}
 			}
 			
@@ -29,7 +30,8 @@ class CarfileCommentsSpec: QuickSpec {
 					"\"#\""
 				]
 				.forEach {
-					expect($0.strippingTrailingCartfileComment) == $0
+					let cartfileStringWithNoTrueComments = $0
+					expect(cartfileStringWithNoTrueComments.strippingTrailingCartfileComment).to(equal(cartfileStringWithNoTrueComments))
 				}
 			}
 			
