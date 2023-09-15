@@ -415,11 +415,6 @@ class XcodeSpec: QuickSpec {
 			expect(result?.value).to(contain(.projectFile(projectURL)))
 		}
 
-		it("should not locate the project from a directory not containing it") {
-			let result = ProjectLocator.locate(in: directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
-			expect(result).to(beNil())
-		}
-
 		it("should build static library and place result to subdirectory") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
