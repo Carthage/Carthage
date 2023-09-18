@@ -89,7 +89,7 @@ install: installables
 	$(SUDO) $(CP) -v -f "$(CARTHAGE_EXECUTABLE)" "$${BINARIES_FOLDER:?}"
 
 uninstall:
-	/bin/zsh --no-globalrcs --no-rcs -c 'set -x; rm -f -v "$${BINARIES_FOLDER:?}"'
+	/bin/zsh --no-globalrcs --no-rcs -c 'set -x; rm -f -v "$${BINARIES_FOLDER:?}/carthage"'
 	
 xcodeproj:
 	 swift package generate-xcodeproj
