@@ -167,6 +167,7 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 public func checkoutRepositoryToDirectory(
 	_ repositoryFileURL: URL,
 	_ workingDirectoryURL: URL,
+	force: Bool,
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { () -> Result<[String: String], CarthageError> in
@@ -184,66 +185,16 @@ public func checkoutRepositoryToDirectory(
 				)
 			}
 	}
-	.flatMap(.concat) { environment in
-		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
+	.flatMap(.concat) { (environment: [String: String]) -> SignalProducer<String, CarthageError> in
+		var arguments = [ "checkout", "--quiet" ]
+		if force {
+			arguments.append("--force")
+		}
+		arguments.append(revision)
+
+		return launchGitTask(arguments, repositoryFileURL: repositoryFileURL, environment: environment)
 	}
 	.then(SignalProducer<(), CarthageError>.empty)
-}
-
-/// Clones the given submodule into the working directory of its parent
-/// repository, but without any Git metadata.
-public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
-
-	func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
-		do {
-			return .success(try closure())
-		} catch let error as NSError {
-			let reason = "could not \(description)"
-			return .failure(
-				.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reason, underlyingError: error)
-			)
-		}
-	}
-
-	let purgeGitDirectories = FileManager.default.reactive
-		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
-		.attemptMap { enumerator, url -> Result<(), CarthageError> in
-			return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
-					try url.resourceValues(forKeys: [ .nameKey ]).name
-				})
-				.flatMap { (name: String?) in
-					guard name == ".git" else { return .success(()) }
-
-					return repositoryCheck("determine whether \(url.path) is a directory", attempt: {
-							try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
-						})
-						.flatMap { (isDirectory: Bool) in
-							if isDirectory { enumerator.skipDescendants() }
-
-							return repositoryCheck("remove \(url.path)") {
-								try FileManager.default.removeItem(at: url)
-							}
-						}
-				}
-		}
-
-	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-		repositoryCheck("remove submodule checkout") {
-			try FileManager.default.removeItem(at: submoduleDirectoryURL)
-		}
-	}
-	.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
-	.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-	.then(purgeGitDirectories)
-}
-
-/// Recursively checks out the given submodule's revision, in its working
-/// directory.
-private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return launchGitTask([ "checkout", "--quiet", submodule.sha ], repositoryFileURL: submoduleWorkingDirectoryURL)
-		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
-		.then(SignalProducer<(), CarthageError>.empty)
 }
 
 /// Parses each key/value entry from the given config file contents, optionally
@@ -487,57 +438,4 @@ public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError
 			return directoryExists && isDirectory.boolValue
 		}
 		.flatMapError { _ in SignalProducer(value: false) }
-}
-
-/// Adds the given submodule to the given repository, cloning from `fetchURL` if
-/// the desired revision does not exist or the submodule needs to be cloned.
-public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
-	let submoduleDirectoryURL = repositoryFileURL.appendingPathComponent(submodule.path, isDirectory: true)
-
-	return isGitRepository(submoduleDirectoryURL)
-		.map { isRepository in
-			// Check if the submodule is initialized/updated already.
-			return isRepository && FileManager.default.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").path)
-		}
-		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
-			if submoduleExists {
-				// Just check out and stage the correct revision.
-				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
-					.then(
-						launchGitTask(
-							["config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.url.urlString],
-							repositoryFileURL: repositoryFileURL
-						)
-					)
-					.then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive", submoduleDirectoryURL.path ], repositoryFileURL: repositoryFileURL))
-					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-					.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
-					.then(SignalProducer<(), CarthageError>.empty)
-			} else {
-				// `git clone` will fail if there's an existing file at that path, so try to remove
-				// anything that's currently there. If this fails, then we're no worse off.
-				// This can happen if you first do `carthage checkout` and then try it again with
-				// `--use-submodules`, e.g.
-				if FileManager.default.fileExists(atPath: submoduleDirectoryURL.path) {
-					try? FileManager.default.removeItem(at: submoduleDirectoryURL)
-				}
-
-				let addSubmodule = launchGitTask(
-						["submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.url.urlString, submodule.path],
-						repositoryFileURL: repositoryFileURL
-					)
-					// A .failure to add usually means the folder was already added
-					// to the index. That's okay.
-					.flatMapError { _ in SignalProducer<String, CarthageError>.empty }
-
-				// If it doesn't exist, clone and initialize a submodule from our
-				// local bare repository.
-				return cloneRepository(fetchURL, submoduleDirectoryURL, isBare: false)
-					.then(launchGitTask([ "remote", "set-url", "origin", submodule.url.urlString ], repositoryFileURL: submoduleDirectoryURL))
-					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-					.then(addSubmodule)
-					.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
-					.then(SignalProducer<(), CarthageError>.empty)
-			}
-		}
 }
