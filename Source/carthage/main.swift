@@ -7,6 +7,8 @@ import Result
 
 setlinebuf(stdout)
 
+fputs("Starting Carthage with xrOS support.\n", stdout)
+
 guard ensureGitVersion().first()?.value == true else {
 	fputs("Carthage requires git \(carthageRequiredGitVersion) or later.\n", stderr)
 	exit(EXIT_FAILURE)
