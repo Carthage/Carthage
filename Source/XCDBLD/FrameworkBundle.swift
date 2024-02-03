@@ -55,8 +55,8 @@ public func mergeIntoXCFramework(
 	variant: String?,
 	outputURL: URL
 ) -> SignalProducer<URL, TaskError> {
-	let baseArguments = ["xcodebuild", "-create-xcframework", "-allow-internal-distribution", "-output", outputURL.path]
-	let newLibraryArguments = ["-framework", framework.path] + debugSymbols.flatMap { ["-debug-symbols", $0.path] }
+	let baseArguments = ["xcodebuild", "-create-xcframework", "-allow-internal-distribution", "-output", outputURL.canonicalPath]
+	let newLibraryArguments = ["-framework", framework.canonicalPath] + debugSymbols.flatMap { ["-debug-symbols", $0.canonicalPath] }
 
 	let buildExistingLibraryArguments: SignalProducer<[String], NoError> = SignalProducer { () throws -> XCFramework in
 		// Load an existing xcframework at xcframeworkURL
@@ -73,14 +73,14 @@ public func mergeIntoXCFramework(
 	.flatMap(.concat) { library -> SignalProducer<String, AnyError> in
 		// Discover and include dSYMs and bcsymbolmaps for each library
 		let libraryURL = xcframeworkURL.appendingPathComponent(library.identifier)
-		var arguments = ["-framework", libraryURL.appendingPathComponent(library.path).path]
+		var arguments = ["-framework", libraryURL.appendingPathComponent(library.path).canonicalPath]
 
 		if let debugSymbolsPath = library.debugSymbolsPath,
 			 let dsyms = try? FileManager.default.contentsOfDirectory(
 				at: libraryURL.appendingPathComponent(debugSymbolsPath),
 				includingPropertiesForKeys: nil
 			 ) {
-			arguments += dsyms.flatMap { ["-debug-symbols", $0.path] }
+			arguments += dsyms.flatMap { ["-debug-symbols", $0.canonicalPath] }
 		}
 
 		if let bitcodeSymbolMapsPath = library.bitcodeSymbolMapsPath,
@@ -88,7 +88,7 @@ public func mergeIntoXCFramework(
 				at: libraryURL.appendingPathComponent(bitcodeSymbolMapsPath),
 				includingPropertiesForKeys: nil
 			 ) {
-			arguments += bcsymbolmaps.flatMap { ["-debug-symbols", $0.path] }
+			arguments += bcsymbolmaps.flatMap { ["-debug-symbols", $0.canonicalPath] }
 		}
 		return SignalProducer(arguments)
 	}
@@ -127,4 +127,30 @@ struct XCFramework: Decodable {
 		case availableLibraries = "AvailableLibraries"
 		case version = "XCFrameworkFormatVersion"
 	}
+}
+
+private extension URL {
+    // See https://forums.swift.org/t/xcodebuild-create-xcframework-not-working-in-xcode-15-0/67439/2 and 
+    // https://forums.swift.org/t/swiftyrelativepath-compute-a-path-between-two-paths/8379
+    var canonicalPath: String {
+        let url = self.withFileSheme
+        do {
+            let resourceValues = try url.resourceValues(forKeys: [.canonicalPathKey])
+            if let canonicalPath = resourceValues.canonicalPath {
+                return canonicalPath
+            } else {
+                print("Canonical path could not be determined for '\(self.path)'")
+                return self.path
+            }
+        } catch {
+            print("Error getting canonical path for '\(self.path)': \(error)")
+            return self.path
+        }
+    }
+
+    private var withFileSheme: URL {
+        var components = URLComponents(url: self, resolvingAgainstBaseURL: true)!
+        components.scheme = "file"
+        return components.url!
+    }
 }
