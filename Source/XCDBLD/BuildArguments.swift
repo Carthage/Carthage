@@ -135,6 +135,10 @@ public struct BuildArguments {
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
 
+		// Avoid breaking lldb when copying the xcframeworks to other machines:
+		// https://github.com/facebook/facebook-ios-sdk/issues/1628
+		args += [ "SWIFT_SERIALIZE_DEBUGGING_OPTIONS=NO" ]
+
 		args += [ "CARTHAGE=YES" ]
 
 		return args
