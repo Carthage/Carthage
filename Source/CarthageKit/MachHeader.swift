@@ -33,7 +33,7 @@ struct MachHeader {
 		return !is64BitHeader
 	}
 
-	var endianess: Endianness {
+	var endianness: Endianness {
 		return magic == MH_CIGAM_64 || magic == MH_CIGAM ? .big : .little
 	}
 }
