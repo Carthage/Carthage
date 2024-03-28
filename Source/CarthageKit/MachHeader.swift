@@ -70,9 +70,9 @@ extension MachHeader {
 		// This is the command `otool -h` actually invokes
 		let task = Task("/usr/bin/xcrun", arguments: [
 			"objdump",
-			"-macho",
-			"-private-header",
-			"-non-verbose",
+			"--macho",
+			"--private-header",
+			"--non-verbose",
 			url.resolvingSymlinksInPath().path,
 			]
 		)
