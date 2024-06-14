@@ -676,10 +676,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
-	let isXcode14OrHigher = XcodeVersion.make()?
-		.majorVersionNumber
-		.map { $0 >= 14 } ?? false
-
 	let buildArgs = BuildArguments(
 		project: project,
 		scheme: scheme,
@@ -691,21 +687,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
 		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
-			var argsForLoading = buildArgs
-			argsForLoading.sdk = sdk
-
-			return BuildSettings
-				.load(with: argsForLoading)
-				.filter { settings in
-					// Filter out SDKs that require bitcode when bitcode is disabled in
-					// project settings. This is necessary for testing frameworks, which
-					// must add a User-Defined setting of ENABLE_BITCODE=NO.
-					// In Xcode 14 and up, bitcode is no longer required for any SDK.
-					return isXcode14OrHigher
-						|| settings.bitcodeEnabled.value == true
-						|| !["appletvos", "watchos"].contains(sdk.rawValue)
-				}
-				.map { _ in sdk }
+			return BuildSettings.denySDKUnderXcodesSub14IfWatchOSOrTVOSAndProjectsDoesNotSpecifySatisfactoryBitcodeSetting(sdk, under: buildArgs)
+				.filterMap { $1 ? $0 as Optional<SDK> : nil }
 		}
 		.reduce(into: [] as Set) { $0.formUnion([$1]) }
 		.flatMap(.concat) { sdks -> SignalProducer<(String, [SDK]), CarthageError> in

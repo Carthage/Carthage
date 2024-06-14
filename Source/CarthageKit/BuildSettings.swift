@@ -39,6 +39,8 @@ public struct BuildSettings {
 		options: [ .caseInsensitive, .anchorsMatchLines ]
 	)
 
+	private static let xcodeVersion: XcodeVersion? = XcodeVersion.make()
+
 	/// Invokes `xcodebuild` to retrieve build settings for the given build
 	/// arguments.
 	///
@@ -53,11 +55,25 @@ public struct BuildSettings {
 		//
 		// "archive" also works around the issue above so use it to determine if
 		// it is configured for the archive action.
-		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments, environment: environment)
+		let xcodeIsBelowVersion16 = (BuildSettings.xcodeVersion?.majorVersionNumber ?? 0) < 16
+		let xcodebuildAction: BuildArguments.Action = (xcodeIsBelowVersion16 || arguments.sdk?.isDevice ?? false) ? .archive : .build
+
+		let task = xcodebuildTask([xcodebuildAction.rawValue, "-showBuildSettings", "-skipUnavailableActions"], arguments, environment: environment)
 
 		return task.launch()
 			.ignoreTaskData()
-			.mapError(CarthageError.taskError)
+			.flatMapError { error in
+				switch error {
+				case let .shellTaskFailed(_, _, standardError):
+					let pattern = "error[:] Found no destinations for the scheme [^\n]+ and action [^\n]+[.]\n"
+					guard Foundation.NSNotFound == NSRegularExpression.rangeOfFirstMatch(pattern: pattern, within: standardError).location else {
+						return SignalProducer.empty
+					}
+				default: break
+				}
+
+				return SignalProducer(error: CarthageError.taskError(error))
+			}
 			// xcodebuild has a bug where xcodebuild -showBuildSettings
 			// can sometimes hang indefinitely on projects that don't
 			// share any schemes, so automatically bail out if it looks
@@ -129,6 +145,24 @@ public struct BuildSettings {
 			.flatten()
 	}
 
+	/// We `deny` — not in the sense of taking effect — but informing via `Bool`.
+	public static func denySDKUnderXcodesSub14IfWatchOSOrTVOSAndProjectsDoesNotSpecifySatisfactoryBitcodeSetting(
+		_ sdk: SDK,
+		under arguments: BuildArguments,
+		for action: BuildArguments.Action? = nil,
+		with environment: [String: String]? = nil
+	) -> SignalProducer<(SDK, Bool), CarthageError> {
+		if BuildSettings.xcodeVersion?.majorVersionNumber ?? 0 >= 14 { return .init(value: (sdk, true)) }
+
+		if !["appletvos", "watchos"].contains(sdk.rawValue) { return .init(value: (sdk, true)) }
+		
+		return BuildSettings
+			.load(with: arguments, for: action, with: environment)
+			.map { settings in
+				(sdk, settings.bitcodeEnabled.value == true)
+			}
+	}
+	
 	/// Returns the value for the given build setting, or an error if it could
 	/// not be determined.
 	public subscript(key: String) -> Result<String, CarthageError> {
@@ -189,9 +223,26 @@ public struct BuildSettings {
 	private var productsDirectoryURLDependingOnAction: Result<URL, CarthageError> {
 		if action == .archive {
 			return self["OBJROOT"]
-				.fanout(archiveIntermediatesBuildProductsPath)
-				.map { objroot, path -> URL in
+				.map { objroot -> URL in
 					let root = URL(fileURLWithPath: objroot, isDirectory: true)
+					guard 1600 <= UInt(self.settings["XCODE_VERSION_ACTUAL", default: "0"]) ?? 0 else { return root }
+
+					return Result(at: root, attempt: { root in
+						var url = root
+						for _ in 0...url.pathComponents.count {
+							if url.pathComponents.suffix(2) == ["Build", "Intermediates.noindex"] {
+								return url
+							} else {
+								url.deleteLastPathComponent()
+							}
+						}
+						
+						throw NSError()
+					})
+						.value ?? root
+				}
+				.fanout(archiveIntermediatesBuildProductsPath)
+				.map { root, path -> URL in
 					return root.appendingPathComponent(path)
 				}
 		} else {
@@ -414,4 +465,14 @@ extension SDK {
 			.skipNil()
 			.reduce(into: SDK.knownIn2023YearSDKs) { $0 = $1 }
 			.replayLazily(upTo: 1)
+}
+
+extension NSRegularExpression {
+	/// Check ``location`` of the returned object against ``Foundation.NSNotFound``. That's a good way to utilize this.
+	static func rangeOfFirstMatch(pattern: String, within string: String?) -> NSRange {
+		let ourString = string ?? ""
+		let range = NSRange(ourString.startIndex..., in: ourString)
+		let regex = try! NSRegularExpression(pattern: pattern)
+		return regex.rangeOfFirstMatch(in: ourString, range: range)
+	}
 }
