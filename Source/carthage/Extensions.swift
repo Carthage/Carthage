@@ -116,6 +116,9 @@ internal struct ProjectEventSink {
 		case let .skippedBuildingCached(dependency):
 			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(dependency.name) + ", skipping build")
 
+		case let .skippedBuildingCopyFromSharedCache(dependency):
+			carthage.println(formatting.bullets + "Copying from shared cache for " + formatting.projectName(dependency.name) + ", skipping build")
+
 		case let .rebuildingCached(dependency):
 			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(dependency.name)
 				+ ", rebuilding with all downstream dependencies")
