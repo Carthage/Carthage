@@ -80,6 +80,24 @@ extension ProjectEvent: Equatable {
 	}
 }
 
+/// Use these queues to ensure there is only one write operation in a specific local
+/// repository directory at a time.
+internal struct RepositoryOperationQueues {
+	private static var queues: Atomic<[URL: SerialProducerQueue]> = Atomic([:])
+
+	internal static func queue(forLocalRepositoryURL url: URL) -> SerialProducerQueue {
+		return queues.modify { queues -> SerialProducerQueue in
+			if let queue = queues[url] {
+				return queue
+			} else {
+				let newQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cloneOrFetchQueue-\(url.absoluteString)")
+				queues[url] = newQueue
+				return newQueue
+			}
+		}
+	}
+}
+
 /// Represents a project that is using Carthage.
 public final class Project { // swiftlint:disable:this type_body_length
 	/// File URL to the root directory of the project.
@@ -909,17 +927,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
+					return self.addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
 				} else {
-					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+					return checkoutRepositoryToDirectoryOnQueue(repositoryURL, workingDirectoryURL, force: true, revision: revision)
 						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
 						.then(symlinkCheckoutPaths)
 						.then(
 							submodulesInRepository(repositoryURL, revision: revision)
 								.flatMap(.merge) {
-									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
+									self.cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
 								}
 						)
 				}
@@ -1290,6 +1308,173 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
+
+	/// Clones the given submodule into the working directory of its parent
+	/// repository, but without any Git metadata.
+	public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+		let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
+
+		func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
+			do {
+				return .success(try closure())
+			} catch let error as NSError {
+				let reason = "could not \(description)"
+				return .failure(
+					.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reason, underlyingError: error)
+				)
+			}
+		}
+
+		let purgeGitDirectories = FileManager.default.reactive
+			.enumerator(at: submoduleDirectoryURL,
+						includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ],
+						options: [ .skipsSubdirectoryDescendants ],
+						catchErrors: true)
+			.attemptMap { enumerator, url -> Result<(), CarthageError> in
+				return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
+					try url.resourceValues(forKeys: [ .nameKey ]).name
+				})
+				.flatMap { (name: String?) in
+					guard name == ".git" else { return .success(()) }
+
+					return repositoryCheck("determine whether \(url.path) is a directory", attempt: {
+						try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
+					})
+					.flatMap { (isDirectory: Bool) in
+						if isDirectory { enumerator.skipDescendants() }
+
+						return repositoryCheck("remove \(url.path)") {
+							try FileManager.default.removeItem(at: url)
+						}
+					}
+				}
+		}
+
+		let dependencyForSubmodule = Dependency.git(submodule.url)
+
+		return cloneOrFetchDependency(dependencyForSubmodule, commitish: submodule.sha)
+			.flatMap(.merge) { repositoryURL -> SignalProducer<String, CarthageError> in
+				return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
+					repositoryCheck("remove submodule checkout") {
+						try FileManager.default.removeItem(at: submoduleDirectoryURL)
+					}
+				}
+				.then(cloneRepository(GitURL(repositoryURL.path), submoduleDirectoryURL, isBare: false))
+				.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: submoduleDirectoryURL))
+			}
+			.then(checkoutRepositoryToDirectoryOnQueue(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
+			.then(submodulesInRepository(submoduleDirectoryURL)
+				.flatMap(.merge) { submodule -> SignalProducer<(), CarthageError> in
+					return self.cloneSubmoduleInWorkingDirectory(submodule, submoduleDirectoryURL)
+				}
+			)
+			.then(purgeGitDirectories)
+	}
+
+	/// Adds the given submodule to the given repository, cloning from `fetchURL` if
+	/// the desired revision does not exist or the submodule needs to be cloned.
+	public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
+		let submoduleDirectoryURL = repositoryFileURL.appendingPathComponent(submodule.path, isDirectory: true)
+
+		return isGitRepository(submoduleDirectoryURL)
+			.map { isRepository in
+				// Check if the submodule is initialized/updated already.
+				return isRepository && FileManager.default.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").path)
+			}
+			.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
+				if submoduleExists {
+					// Just check out and stage the correct revision.
+					return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
+						.then(
+							launchGitTask(
+								["config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.url.urlString],
+								repositoryFileURL: repositoryFileURL
+							)
+						)
+						.then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive", submoduleDirectoryURL.path ], repositoryFileURL: repositoryFileURL))
+						.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false))
+						.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
+						.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: submoduleDirectoryURL))
+						.then(self.updateSubmodules(submoduleDirectoryURL))
+				} else {
+					// `git clone` will fail if there's an existing file at that path, so try to remove
+					// anything that's currently there. If this fails, then we're no worse off.
+					// This can happen if you first do `carthage checkout` and then try it again with
+					// `--use-submodules`, e.g.
+					if FileManager.default.fileExists(atPath: submoduleDirectoryURL.path) {
+						try? FileManager.default.removeItem(at: submoduleDirectoryURL)
+					}
+
+					let addSubmodule = launchGitTask(
+							["submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.url.urlString, submodule.path],
+							repositoryFileURL: repositoryFileURL
+						)
+						// A .failure to add usually means the folder was already added
+						// to the index. That's okay.
+						.flatMapError { _ in SignalProducer<String, CarthageError>.empty }
+
+					// If it doesn't exist, clone and initialize a submodule from our
+					// local bare repository.
+					return cloneRepository(fetchURL, submoduleDirectoryURL, isBare: false)
+						.then(launchGitTask([ "remote", "set-url", "origin", submodule.url.urlString ], repositoryFileURL: submoduleDirectoryURL))
+						.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false))
+						.then(addSubmodule)
+						.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+						.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: submoduleDirectoryURL))
+						.then(self.updateSubmodules(submoduleDirectoryURL))
+				}
+			}
+	}
+
+	public func updateSubmodules(_ superprojectDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+		func changeGitmodulesUrls(toCacheURL: Bool) -> SignalProducer<(), CarthageError> {
+			return submodulesInRepository(superprojectDirectoryURL)
+				.flatMap(.concat) { submodule -> SignalProducer<String, CarthageError> in
+					let url: String
+					if toCacheURL {
+						let dependencyForSubmodule = Dependency.git(submodule.url)
+						let submoduleCacheRepository = repositoryFileURL(for: dependencyForSubmodule)
+						url = submoduleCacheRepository.absoluteString
+					} else {
+						url = submodule.url.urlString
+					}
+
+					return launchGitTask(
+						[ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", url ],
+						repositoryFileURL: superprojectDirectoryURL
+					)
+				}
+				.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: superprojectDirectoryURL))
+				.then(SignalProducer<(), CarthageError>.empty)
+		}
+
+		return submodulesInRepository(superprojectDirectoryURL)
+			.collect()
+			.flatMap(.concat) { submodules -> SignalProducer<(), CarthageError> in
+				guard !submodules.isEmpty else {
+					return SignalProducer.empty
+				}
+
+				return SignalProducer(submodules)
+					.flatMap(.merge) { submodule -> SignalProducer<URL, CarthageError> in
+						let dependencyForSubmodule = Dependency.git(submodule.url)
+						return self.cloneOrFetchDependency(dependencyForSubmodule, commitish: submodule.sha)
+					}
+					.then(
+						changeGitmodulesUrls(toCacheURL: true)
+							.then(launchGitTask([ "submodule", "--quiet", "update", "--init" ], repositoryFileURL: superprojectDirectoryURL))
+							.then(changeGitmodulesUrls(toCacheURL: false))
+							.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: superprojectDirectoryURL))
+					)
+					.then(
+						SignalProducer(submodules)
+							.flatMap(.merge) { submodule -> SignalProducer<(), CarthageError> in
+								let submoduleDirectoryURL = superprojectDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
+								return self.updateSubmodules(submoduleDirectoryURL)
+							}
+					)
+			}
+	}
 }
 
 /// Creates symlink between the dependency build folder and the root build folder
@@ -1587,6 +1772,28 @@ internal func relativeLinkDestination(for dependency: Dependency, subdirectory: 
 	return linkDestinationPath
 }
 
+/// Checks out the working tree of the given (ideally bare) repository, at the
+/// specified revision, to the given folder, in a queue to prevent any race condition.
+/// If the folder does not exist, it will be created.
+internal func checkoutRepositoryToDirectoryOnQueue(
+	_ repositoryFileURL: URL,
+	_ workingDirectoryURL: URL,
+	force: Bool,
+	revision: String = "HEAD"
+) -> SignalProducer<(), CarthageError> {
+	if repositoryFileURL != workingDirectoryURL {
+		// Git will try to lock the repositoryFileURL by creating a index.lock file.
+		// If the file already exists, the git operation will fail, so this queue
+		// is necessary.
+		return checkoutRepositoryToDirectory(repositoryFileURL, workingDirectoryURL, force: force, revision: revision)
+			.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: workingDirectoryURL))
+			.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: repositoryFileURL))
+	} else {
+		return checkoutRepositoryToDirectory(repositoryFileURL, workingDirectoryURL, force: force, revision: revision)
+			.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: workingDirectoryURL))
+	}
+}
+
 /// Clones the given project to the given destination URL (defaults to the global
 /// repositories folder), or fetches inside it if it has already been cloned.
 /// Optionally takes a commitish to check for prior to fetching.
@@ -1655,6 +1862,7 @@ public func cloneOrFetch(
 					}
 				}
 		}
+		.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: repositoryURL))
 }
 
 private func binaryAssetPrioritization(forName assetName: String) -> (keyName: String, priority: UInt8) {
