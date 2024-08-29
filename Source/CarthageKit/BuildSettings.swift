@@ -65,7 +65,7 @@ public struct BuildSettings {
 			.flatMapError { error in
 				switch error {
 				case let .shellTaskFailed(_, _, standardError):
-					let pattern = "error[:] [^\n]+Found no destinations for the scheme [^\n]+ and action [^\n]+[.]\n"
+					let pattern = "error[:] [^\n]*Found no destinations for the scheme [^\n]+ and action [^\n]+[.]\n"
 					guard Foundation.NSNotFound == NSRegularExpression.rangeOfFirstMatch(pattern: pattern, within: standardError).location else {
 						return SignalProducer.empty
 					}
