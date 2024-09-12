@@ -1,0 +1,37 @@
+name: SwiftLint
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/swiftlint.yml'
+      - '.swiftlint.yml'
+      - '**/*.swift'
+
+jobs:
+  SwiftLint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get file changes
+        id: get_file_changes
+        uses: trilom/file-changes-action@v1.2.3
+        with:
+          output: json
+      - name: Echo file changes
+        run: |
+          echo Changed files: ${{ steps.get_file_changes.outputs.files }}
+      - name: Filter array
+        id: array_filter
+        uses: Shepherd-Dog/array-filter-action@v1.1.0
+        with:
+          arrayToFilter: ${{ steps.get_file_changes.outputs.files }}
+          outputFormat: 'space_delimited'
+          suffixFilter: '.swift'
+      - name: Echo file changes after filter
+        run: |
+          echo Changed files: ${{ steps.array_filter.outputs.filteredArray }}
+      - name: GitHub Action for SwiftLint (Only files changed in the PR)
+        uses: norio-nomura/action-swiftlint@3.1.0
+        env:
+          DIFF___BASE: ${{ github.base_ref }}
+          changedFiles: ${{ steps.array_filter.outputs.filteredArray }}
