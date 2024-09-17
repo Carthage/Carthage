@@ -806,7 +806,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				case .doesNotExist:
 					return .empty
 
-				case let .apiError(_, _, error):
+				case let .apiError(statusCode, _, error) where statusCode != 401:
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
 					self._projectEventsObserver.send(value: .skippedDownloadingBinaries(dependency, error.message))
