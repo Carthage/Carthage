@@ -53,7 +53,7 @@ public struct BuildSettings {
 		//
 		// "archive" also works around the issue above so use it to determine if
 		// it is configured for the archive action.
-		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments, environment: environment)
+		let task = xcodebuildTask(["build", "-showBuildSettings", "-skipUnavailableActions"], arguments, environment: environment)
 
 		return task.launch()
 			.ignoreTaskData()
