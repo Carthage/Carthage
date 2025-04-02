@@ -91,6 +91,13 @@ class XcodeSpec: QuickSpec {
 				expect(result?.value) == "4.0 (swiftlang-900.0.43 clang-900.0.22.8)"
 			}
 
+			it("should determine a framework's Swift version even when header not -Swift.h") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeSwiftNonConventionalHeader.framework", withExtension: nil)!
+				let result = frameworkSwiftVersion(frameworkURL).single()
+
+				expect(result?.value) == "4.0 (swiftlang-900.0.43 clang-900.0.22.8)"
+			}
+
 			#if !SWIFT_PACKAGE
 			it("should determine when a Swift framework is compatible") {
 				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL, usingToolchain: nil).single()
