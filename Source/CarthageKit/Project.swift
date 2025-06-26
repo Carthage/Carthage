@@ -771,13 +771,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
 				}
 				.flatMap(.concat) { self.removeItem(at: $0) }
-				.map { true }
+				.collect()
+				.map { !$0.isEmpty }
 				.flatMapError { error in
 					self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: dependency, error: error))
 					return SignalProducer(value: false)
 				}
-				.concat(value: false)
-				.take(first: 1)
 
 		case .git, .binary:
 			return SignalProducer(value: false)
