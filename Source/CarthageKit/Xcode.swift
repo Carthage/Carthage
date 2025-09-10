@@ -969,6 +969,14 @@ private func build(
 					let actions: [String] = {
 						var result: [String] = [xcodebuildAction.rawValue]
 
+						if settings.contains(where: {
+							$0["SDK_NAME"].recover("").lowercased().hasPrefix("mac") &&
+							UInt64($0["XCODE_VERSION_ACTUAL"].recover("")) ?? 0 > 1699
+						}) {
+							// Fixes Xcode 26 beta 5 and beyond
+							result += [ "-destination", "generic/platform=macosx,variant=macos" ]
+						}
+						
 						if settings.contains(where: { UInt64($0["XCODE_VERSION_ACTUAL"].recover("")) ?? 0 >= 1230 }) {
 							// Fixes Xcode 12.3 refusing to link against fat binaries
 							// "Building for iOS Simulator, but the linked and embedded framework 'REDACTED.framework' was built for iOS + iOS Simulator."

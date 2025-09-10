@@ -57,6 +57,11 @@ public struct BuildSettings {
 		// it is configured for the archive action.
 		let xcodeIsBelowVersion16 = (BuildSettings.xcodeVersion?.majorVersionNumber ?? 0) < 16
 		let xcodebuildAction: BuildArguments.Action = (xcodeIsBelowVersion16 || arguments.sdk?.isDevice ?? false) ? .archive : .build
+		
+		var arguments = arguments
+		if (BuildSettings.xcodeVersion?.majorVersionNumber ?? 0) >= 26, arguments.sdk?.rawValue == "macosx" {
+			arguments.destination = "generic/platform=macosx,variant=macos"
+		}
 
 		let task = xcodebuildTask([xcodebuildAction.rawValue, "-showBuildSettings", "-skipUnavailableActions"], arguments, environment: environment)
 
