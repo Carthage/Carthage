@@ -102,7 +102,7 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 		arguments.append("--bare")
 	}
 
-	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.path ])
+	return launchGitTask(arguments + [ "--quiet", "--", cloneURL.urlString, destinationURL.path ])
 		.on(completed: {
 			FetchCache.updateLastFetchTime(forURL: cloneURL)
 		})
@@ -114,7 +114,7 @@ public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, 
 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
 	if let remoteURL = remoteURL {
-		arguments.append(remoteURL.urlString)
+		arguments.append(contentsOf: [ "--", remoteURL.urlString ])
 	}
 
 	// Specify an explict refspec that fetches tags for pruning.
@@ -533,7 +533,7 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 				// If it doesn't exist, clone and initialize a submodule from our
 				// local bare repository.
 				return cloneRepository(fetchURL, submoduleDirectoryURL, isBare: false)
-					.then(launchGitTask([ "remote", "set-url", "origin", submodule.url.urlString ], repositoryFileURL: submoduleDirectoryURL))
+					.then(launchGitTask([ "remote", "set-url", "--", "origin", submodule.url.urlString ], repositoryFileURL: submoduleDirectoryURL))
 					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 					.then(addSubmodule)
 					.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
